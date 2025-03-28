@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row mb-3">
+        <div class="col">
+            <h2>Yeni Kullanıcı Ekle</h2>
+        </div>
+        <div class="col text-end">
+            <a href="{{ url_for('auth.users_list') }}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-1"></i> Kullanıcı Listesine Dön
+            </a>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm">
+        <div class="card-body">
+            <form action="{{ url_for('auth.add_user') }}" method="post" class="row g-3">
+                {{ form.hidden_tag() }}
+                
+                <!-- Kullanıcı Bilgileri -->
+                <div class="col-md-6">
+                    <label for="username" class="form-label">{{ form.username.label }}</label>
+                    {{ form.username(class="form-control") }}
+                    {% if form.username.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.username.errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <div class="col-md-6">
+                    <label for="email" class="form-label">{{ form.email.label }}</label>
+                    {{ form.email(class="form-control") }}
+                    {% if form.email.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.email.errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                    <div class="form-text">İsteğe bağlı</div>
+                </div>
+                
+                <div class="col-md-6">
+                    <label for="password" class="form-label">{{ form.password.label }}</label>
+                    {{ form.password(class="form-control") }}
+                    {% if form.password.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.password.errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <div class="col-md-6">
+                    <label for="password2" class="form-label">{{ form.password2.label }}</label>
+                    {{ form.password2(class="form-control") }}
+                    {% if form.password2.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.password2.errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <div class="col-md-6">
+                    <label for="role" class="form-label">{{ form.role.label }}</label>
+                    {{ form.role(class="form-select") }}
+                    {% if form.role.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.role.errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <div class="col-12 mt-4">
+                    {{ form.submit(class="btn btn-primary") }}
+                    <a href="{{ url_for('auth.users_list') }}" class="btn btn-outline-secondary ms-2">İptal</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %} 

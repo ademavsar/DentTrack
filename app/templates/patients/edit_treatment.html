@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row mb-3">
+        <div class="col">
+            <h2>Tedavi Düzenle</h2>
+            <p class="text-muted">
+                <i class="fas fa-user me-1"></i> Hasta: 
+                <a href="{{ url_for('patients.view_patient', patient_id=treatment.patient.id) }}" class="text-decoration-none fw-medium">
+                    {{ treatment.patient.first_name }} {{ treatment.patient.last_name }}
+                </a>
+            </p>
+        </div>
+        <div class="col text-end">
+            <a href="{{ url_for('patients.view_treatment', treatment_id=treatment.id) }}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-1"></i> Tedavi Detaylarına Dön
+            </a>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm">
+        <div class="card-body">
+            <form action="{{ url_for('patients.edit_treatment', treatment_id=treatment.id) }}" method="post" class="row g-3">
+                <!-- Tedavi Bilgileri -->
+                <div class="col-md-6">
+                    <label for="treatment_type" class="form-label">Tedavi Türü <span class="text-danger">*</span></label>
+                    <select class="form-select" id="treatment_type" name="treatment_type_id" required>
+                        {% for type in treatment_types %}
+                        <option value="{{ type.id }}" data-price="{{ type.base_price }}" 
+                                {% if type.id == treatment.treatment_type_id %}selected{% endif %}>
+                            {{ type.name }} ({{ "%.2f"|format(type.base_price) }} ₺)
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="col-md-6">
+                    <label for="treatment_date" class="form-label">Tedavi Tarihi <span class="text-danger">*</span></label>
+                    <input type="date" class="form-control" id="treatment_date" name="treatment_date" 
+                           value="{{ treatment.treatment_date.strftime('%Y-%m-%d') }}" required>
+                </div>
+                
+                <div class="col-md-6">
+                    <label for="price" class="form-label">Fiyat (₺) <span class="text-danger">*</span></label>
+                    <input type="number" step="0.01" class="form-control" id="price" name="price" 
+                           value="{{ "%.2f"|format(treatment.price) }}" required>
+                </div>
+                
+                <div class="col-12">
+                    <label for="notes" class="form-label">Notlar</label>
+                    <textarea class="form-control" id="notes" name="notes" rows="3">{{ treatment.notes or '' }}</textarea>
+                </div>
+                
+                <div class="col-12 mt-4">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-1"></i> Değişiklikleri Kaydet
+                    </button>
+                    <a href="{{ url_for('patients.view_treatment', treatment_id=treatment.id) }}" class="btn btn-outline-secondary ms-2">İptal</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const treatmentTypeSelect = document.getElementById('treatment_type');
+    const priceInput = document.getElementById('price');
+    
+    // Only update price if the user changes the treatment type
+    treatmentTypeSelect.addEventListener('change', function() {
+        const selectedOption = this.options[this.selectedIndex];
+        if (selectedOption && selectedOption.dataset.price) {
+            priceInput.value = parseFloat(selectedOption.dataset.price).toFixed(2);
+        }
+    });
+});
+</script>
+{% endblock %} 

@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row mb-3">
+        <div class="col">
+            <h2>Hasta Bilgilerini Düzenle</h2>
+        </div>
+        <div class="col text-end">
+            <a href="{{ url_for('patients.view_patient', patient_id=patient.id) }}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-1"></i> Hasta Profiline Dön
+            </a>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm">
+        <div class="card-body">
+            <form action="{{ url_for('patients.edit_patient', patient_id=patient.id) }}" method="post" class="row g-3">
+                <!-- Kişisel Bilgiler -->
+                <div class="col-md-6">
+                    <label for="first_name" class="form-label">Ad <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="first_name" name="first_name" 
+                           value="{{ patient.first_name }}" required>
+                </div>
+                
+                <div class="col-md-6">
+                    <label for="last_name" class="form-label">Soyad <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="last_name" name="last_name" 
+                           value="{{ patient.last_name }}" required>
+                </div>
+                
+                <div class="col-md-6">
+                    <label for="phone" class="form-label">Telefon <span class="text-danger">*</span></label>
+                    <input type="tel" class="form-control" id="phone" name="phone" 
+                           value="{{ patient.phone }}" required>
+                </div>
+                
+                <div class="col-md-6">
+                    <label for="tc_no" class="form-label">TC Kimlik No</label>
+                    <input type="text" class="form-control" id="tc_no" name="tc_no" 
+                           value="{{ patient.tc_no or '' }}" maxlength="11" pattern="[0-9]{11}">
+                    <div class="form-text">Opsiyonel, 11 haneli rakam</div>
+                </div>
+                
+                <div class="col-12">
+                    <label for="address" class="form-label">Adres</label>
+                    <textarea class="form-control" id="address" name="address" rows="3">{{ patient.address or '' }}</textarea>
+                </div>
+                
+                <div class="col-12 mt-4">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-1"></i> Değişiklikleri Kaydet
+                    </button>
+                    <a href="{{ url_for('patients.view_patient', patient_id=patient.id) }}" class="btn btn-outline-secondary ms-2">İptal</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %} 

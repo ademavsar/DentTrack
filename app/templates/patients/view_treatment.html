@@ -1,0 +1,223 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Tedavi Bilgileri ve Üst Menü -->
+    <div class="row mb-3">
+        <div class="col">
+            <h2>Tedavi Bilgileri</h2>
+            <p class="text-muted">
+                <i class="fas fa-user me-1"></i> Hasta: 
+                <a href="{{ url_for('patients.view_patient', patient_id=treatment.patient.id) }}" class="text-decoration-none fw-medium">
+                    {{ treatment.patient.first_name }} {{ treatment.patient.last_name }}
+                </a>
+            </p>
+        </div>
+        <div class="col text-end">
+            <a href="{{ url_for('patients.view_patient', patient_id=treatment.patient.id) }}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-1"></i> Hasta Profiline Dön
+            </a>
+        </div>
+    </div>
+
+    <!-- Tedavi Detayları -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-8">
+                    <table class="table table-borderless">
+                        <tbody>
+                            <tr>
+                                <th style="width: 180px;">Tedavi Türü:</th>
+                                <td>{{ treatment.treatment_type.name }}</td>
+                            </tr>
+                            <tr>
+                                <th>Tedavi Tarihi:</th>
+                                <td>{{ treatment.treatment_date.strftime('%d.%m.%Y') }}</td>
+                            </tr>
+                            <tr>
+                                <th>Tedavi Tutarı:</th>
+                                <td>{{ "%.2f"|format(treatment.price) }} ₺</td>
+                            </tr>
+                            <tr>
+                                <th>Ödeme Durumu:</th>
+                                <td>
+                                    {% if is_paid %}
+                                    <span class="badge bg-success bg-opacity-10 text-success">Ödendi</span>
+                                    {% else %}
+                                    <span class="badge bg-danger bg-opacity-10 text-danger">Ödenmedi</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% if treatment.notes %}
+                            <tr>
+                                <th>Notlar:</th>
+                                <td>{{ treatment.notes }}</td>
+                            </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+                <div class="col-md-4 text-end">
+                    <div class="d-flex flex-column gap-2">
+                        {% if not is_paid %}
+                        <a href="{{ url_for('patients.add_payment', treatment_id=treatment.id) }}" class="btn btn-success">
+                            <i class="fas fa-money-bill-wave me-1"></i> Ödeme Al
+                        </a>
+                        {% endif %}
+                        <a href="{{ url_for('patients.edit_treatment', treatment_id=treatment.id) }}" class="btn btn-outline-primary">
+                            <i class="fas fa-edit me-1"></i> Tedaviyi Düzenle
+                        </a>
+                        <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteTreatmentModal">
+                            <i class="fas fa-trash me-1"></i> Tedaviyi Sil
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Ödeme Özeti -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <h6 class="text-muted mb-2">Tedavi Tutarı</h6>
+                    <h3>{{ "%.2f"|format(treatment.price) }} ₺</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <h6 class="text-muted mb-2">Ödenen Tutar</h6>
+                    <h3 class="text-success">{{ "%.2f"|format(paid_amount) }} ₺</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <h6 class="text-muted mb-2">Kalan Borç</h6>
+                    <h3 class="{% if remaining_amount > 0 %}text-danger{% else %}text-success{% endif %}">
+                        {{ "%.2f"|format(remaining_amount) }} ₺
+                    </h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Ödemeler Tablosu -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-transparent border-0">
+            <h5 class="mb-0">Ödemeler</h5>
+        </div>
+        <div class="card-body">
+            {% if payments %}
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead>
+                        <tr>
+                            <th>Tarih</th>
+                            <th>Tutar</th>
+                            <th>Ödeme Yöntemi</th>
+                            <th>Not</th>
+                            <th class="text-end">İşlemler</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for payment in payments %}
+                        <tr>
+                            <td>{{ payment.payment_date.strftime('%d.%m.%Y %H:%M') }}</td>
+                            <td>{{ "%.2f"|format(payment.amount) }} ₺</td>
+                            <td>
+                                {% if payment.payment_method == 'cash' %}
+                                <span class="badge bg-success bg-opacity-10 text-success">Nakit</span>
+                                {% elif payment.payment_method == 'credit_card' %}
+                                <span class="badge bg-info bg-opacity-10 text-info">Kredi Kartı</span>
+                                {% elif payment.payment_method == 'mixed' %}
+                                <span class="badge bg-warning bg-opacity-10 text-warning">Karma</span>
+                                {% endif %}
+                                
+                                {% if payment.payment_method == 'mixed' and payment.payment_details %}
+                                <div class="small mt-1">
+                                    {% for detail in payment.payment_details %}
+                                    {% if detail.payment_type == 'cash' %}
+                                    <div>Nakit: {{ "%.2f"|format(detail.amount) }} ₺</div>
+                                    {% else %}
+                                    <div>K. Kartı: {{ "%.2f"|format(detail.amount) }} ₺</div>
+                                    {% endif %}
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                            </td>
+                            <td>{{ payment.notes or '-' }}</td>
+                            <td class="text-end">
+                                <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deletePaymentModal{{ payment.id }}">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                                
+                                <!-- Delete Payment Modal -->
+                                <div class="modal fade" id="deletePaymentModal{{ payment.id }}" tabindex="-1">
+                                    <div class="modal-dialog">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title">Ödeme Silme</h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                            </div>
+                                            <div class="modal-body">
+                                                <p class="mb-0">{{ payment.payment_date.strftime('%d.%m.%Y') }} tarihli {{ "%.2f"|format(payment.amount) }} ₺ tutarındaki ödemeyi silmek istediğinize emin misiniz?</p>
+                                                <p class="text-danger small mt-2 mb-0">Bu işlem geri alınamaz.</p>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                                                <form action="{{ url_for('patients.delete_payment', payment_id=payment.id) }}" method="post">
+                                                    <button type="submit" class="btn btn-danger">Ödemeyi Sil</button>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-4">
+                <div class="text-muted mb-3">
+                    <i class="fas fa-money-bill-wave fa-3x"></i>
+                </div>
+                <p>Bu tedavi için henüz ödeme yapılmamış.</p>
+                <a href="{{ url_for('patients.add_payment', treatment_id=treatment.id) }}" class="btn btn-success">
+                    <i class="fas fa-plus me-1"></i> Ödeme Ekle
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Delete Treatment Modal -->
+    <div class="modal fade" id="deleteTreatmentModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Tedavi Silme</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-0">Bu tedaviyi silmek istediğinize emin misiniz?</p>
+                    <p class="text-danger small mt-2 mb-0">Bu işlem geri alınamaz ve tedaviye ait tüm ödemeler de silinecektir.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                    <form action="{{ url_for('patients.delete_treatment', treatment_id=treatment.id) }}" method="post">
+                        <button type="submit" class="btn btn-danger">Tedaviyi Sil</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

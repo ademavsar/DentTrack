@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row mb-3">
+        <div class="col">
+            <h2>Yeni Hasta Kaydı</h2>
+        </div>
+        <div class="col text-end">
+            <a href="{{ url_for('patients.list_patients') }}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-1"></i> Hasta Listesine Dön
+            </a>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm">
+        <div class="card-body">
+            <form action="{{ url_for('patients.add_patient') }}" method="post" class="row g-3">
+                <!-- Zorunlu Bilgiler -->
+                <div class="col-12 mb-2">
+                    <h5 class="text-primary mb-3">Zorunlu Bilgiler</h5>
+                </div>
+                
+                <div class="col-md-6">
+                    <label for="first_name" class="form-label">Ad <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="first_name" name="first_name" required>
+                </div>
+                
+                <div class="col-md-6">
+                    <label for="last_name" class="form-label">Soyad <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="last_name" name="last_name" required>
+                </div>
+                
+                <div class="col-md-6">
+                    <label for="phone" class="form-label">Telefon <span class="text-danger">*</span></label>
+                    <input type="tel" class="form-control" id="phone" name="phone" 
+                           placeholder="05XX XXX XX XX" required>
+                </div>
+                
+                <!-- Opsiyonel Bilgiler -->
+                <div class="col-12 mt-4 mb-2">
+                    <h5 class="text-secondary mb-3">Opsiyonel Bilgiler</h5>
+                </div>
+                
+                <div class="col-md-6">
+                    <label for="tc_no" class="form-label">TC Kimlik No</label>
+                    <input type="text" class="form-control" id="tc_no" name="tc_no" 
+                           placeholder="11 haneli TC Kimlik No" maxlength="11" pattern="[0-9]{11}">
+                    <div class="form-text">11 haneli rakam</div>
+                </div>
+                
+                <div class="col-12">
+                    <label for="address" class="form-label">Adres</label>
+                    <textarea class="form-control" id="address" name="address" rows="2"></textarea>
+                </div>
+                
+                <div class="col-12">
+                    <label for="notes" class="form-label">Notlar</label>
+                    <textarea class="form-control" id="notes" name="notes" rows="2"></textarea>
+                    <div class="form-text">Hasta hakkında önemli bilgiler (alerjiler, kronik hastalıklar, vb.)</div>
+                </div>
+                
+                <div class="col-12 mt-4 d-flex justify-content-end">
+                    <a href="{{ url_for('patients.list_patients') }}" class="btn btn-outline-secondary me-2 px-4">İptal</a>
+                    <button type="submit" class="btn btn-primary px-4">
+                        <i class="fas fa-save me-1"></i> Kaydet
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %} 

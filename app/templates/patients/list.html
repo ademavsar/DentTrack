@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row mb-3">
+        <div class="col">
+            <h2>Hastalar</h2>
+        </div>
+        <div class="col text-end">
+            <a href="{{ url_for('patients.add_patient') }}" class="btn btn-primary">
+                <i class="fas fa-plus me-1"></i> Yeni Hasta
+            </a>
+        </div>
+    </div>
+
+    <!-- Arama ve Filtreleme -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+            <form action="{{ url_for('patients.list_patients') }}" method="get">
+                <div class="input-group">
+                    <span class="input-group-text border-0">
+                        <i class="fas fa-search text-muted"></i>
+                    </span>
+                    <input type="text" class="form-control border-0" name="search" 
+                           placeholder="İsim, telefon veya TC no ile ara..." 
+                           value="{{ request.args.get('search', '') }}">
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Hasta Listesi -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Ad Soyad</th>
+                            <th>Telefon</th>
+                            <th>Kayıt Tarihi</th>
+                            <th>Son İşlem</th>
+                            <th>Kalan Borç</th>
+                            <th class="text-end">İşlemler</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for patient in patients %}
+                        <tr>
+                            <td>{{ patient.id }}</td>
+                            <td>
+                                <a href="{{ url_for('patients.view_patient', patient_id=patient.id) }}" 
+                                   class="text-decoration-none fw-medium">
+                                    {{ patient.first_name }} {{ patient.last_name }}
+                                </a>
+                            </td>
+                            <td>{{ patient.phone }}</td>
+                            <td>{{ patient.registration_date.strftime('%d.%m.%Y') }}</td>
+                            <td>
+                                {% if patient.last_treatment_date %}
+                                {{ patient.last_treatment_date.strftime('%d.%m.%Y') }}
+                                {% else %}
+                                <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if patient.balance and patient.balance > 0 %}
+                                <span class="text-danger fw-medium">{{ "%.2f"|format(patient.balance) }} ₺</span>
+                                {% elif patient.balance and patient.balance < 0 %}
+                                <span class="text-success fw-medium">{{ "%.2f"|format(patient.balance|abs) }} ₺ Alacak</span>
+                                {% else %}
+                                <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end">
+                                <a href="{{ url_for('patients.view_patient', patient_id=patient.id) }}" 
+                                   class="btn btn-sm btn-outline-primary me-1">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <a href="{{ url_for('patients.edit_patient', patient_id=patient.id) }}" 
+                                   class="btn btn-sm btn-outline-secondary me-1">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <button type="button" class="btn btn-sm btn-outline-danger" 
+                                        data-bs-toggle="modal" 
+                                        data-bs-target="#deletePatientModal{{ patient.id }}">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                                
+                                <!-- Delete Modal -->
+                                <div class="modal fade" id="deletePatientModal{{ patient.id }}" tabindex="-1">
+                                    <div class="modal-dialog">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title">Hasta Silme</h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                            </div>
+                                            <div class="modal-body">
+                                                <p class="mb-1">
+                                                    <strong>{{ patient.first_name }} {{ patient.last_name }}</strong> 
+                                                    hastasını silmek istediğinize emin misiniz?
+                                                </p>
+                                                <p class="text-danger small mb-0">
+                                                    Bu işlem geri alınamaz ve hastaya ait tüm tedavi ve ödeme kayıtları da silinecektir.
+                                                </p>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                                                <form action="{{ url_for('patients.delete_patient', patient_id=patient.id) }}" method="post">
+                                                    <button type="submit" class="btn btn-danger">Hastayı Sil</button>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="7" class="text-center py-4">
+                                {% if request.args.get('search') %}
+                                <div class="text-muted">
+                                    <i class="fas fa-search me-2"></i>
+                                    Aramanızla eşleşen hasta bulunamadı.
+                                </div>
+                                {% else %}
+                                <div class="text-muted">
+                                    <i class="fas fa-user-plus me-2"></i>
+                                    Henüz hasta kaydı bulunmamaktadır.
+                                </div>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

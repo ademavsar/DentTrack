@@ -1,0 +1,17 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Project Rules
+
+As a developer, you must follow these instructions precisely. All tasks and progress should be managed within the `DEV_TASKS.md` file only.
+
+- All tasks should be clearly marked with checkboxes.
+- Once a task is complete, tick the corresponding box.
+- If a task raises any uncertainty or requires clarification, do not proceed. Instead, insert a `> ⚠️` callout below the relevant task with a brief note.
+- Do not provide external summaries or explanations. All notes must stay within the file.
+- If the next task is listed and unchecked, proceed to that task automatically after completing the current one.
+- You are not expected to provide additional messages unless explicitly asked via the file.
+
+<!-- Preferred Workflow: file-driven -->

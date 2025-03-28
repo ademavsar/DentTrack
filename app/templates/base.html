@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="tr" data-bs-theme="auto">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Diş Kliniği - Ödeme Takip Sistemi</title>
+    <!-- Favicon -->
+    <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .navbar-brand {
+            font-weight: bold;
+        }
+        .table th {
+            background-color: var(--bs-table-bg);
+        }
+        [data-bs-theme="dark"] .card {
+            --bs-card-bg: var(--bs-dark-bg-subtle);
+        }
+        [data-bs-theme="dark"] .modal-content {
+            --bs-modal-bg: var(--bs-dark-bg-subtle);
+        }
+        /* Theme-aware form styling */
+        .input-group-text {
+            background-color: var(--bs-tertiary-bg);
+        }
+        .form-control {
+            background-color: var(--bs-body-bg);
+            color: var(--bs-body-color);
+        }
+        .form-control:focus {
+            background-color: var(--bs-body-bg);
+            color: var(--bs-body-color);
+        }
+        /* Enhanced login-required alert styling */
+        .flash-container {
+            position: fixed;
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1050;
+            width: auto;
+            max-width: 90%;
+        }
+        .login-required-alert {
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1) !important;
+            animation: fadeInDown 0.5s ease-out;
+            min-width: 300px;
+            max-width: 100%;
+            border-left: 4px solid var(--bs-info) !important;
+            background-color: var(--bs-body-bg);
+        }
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('patients.index') }}">
+                <i class="fas fa-tooth me-2"></i>Moda Dent
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('patients.list_patients') }}">
+                            <i class="fas fa-users me-2"></i>Hastalar
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('treatments.list_types') }}">
+                            <i class="fas fa-list-alt me-2"></i>Tedavi Türleri
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('patients.unpaid_treatments') }}">
+                            <i class="fas fa-hand-holding-usd me-1"></i>Bekleyen Ödemeler
+                        </a>
+                    </li>
+                </ul>
+                <!-- User Menu -->
+                <div class="dropdown ms-3">
+                    <button class="btn btn-link nav-link py-2 px-0 px-lg-2 dropdown-toggle d-flex align-items-center" 
+                            type="button"
+                            id="userMenu"
+                            data-bs-toggle="dropdown"
+                            aria-expanded="false">
+                        <i class="fas fa-user-circle me-1"></i>
+                        <span class="d-none d-lg-inline">{{ current_user.username }}</span>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userMenu">
+                        {% if current_user.is_admin() %}
+                        <li>
+                            <a class="dropdown-item d-flex align-items-center" href="{{ url_for('admin.users_list') }}">
+                                <i class="fas fa-users-cog me-2"></i>Kullanıcı Yönetimi
+                            </a>
+                        </li>
+                        <li><hr class="dropdown-divider"></li>
+                        {% endif %}
+                        <li>
+                            <a class="dropdown-item d-flex align-items-center" href="{{ url_for('auth.logout') }}">
+                                <i class="fas fa-sign-out-alt me-2"></i>Çıkış Yap
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+                <!-- Theme Toggle Button -->
+                <button class="btn btn-link nav-link py-2 px-0 px-lg-2 d-flex align-items-center" 
+                        id="theme-toggle" 
+                        type="button" 
+                        data-bs-toggle="tooltip" 
+                        data-bs-placement="bottom" 
+                        title="Tema Değiştir">
+                    <i class="fas fa-sun theme-icon-active me-1"></i>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Flash Mesajları -->
+    <div class="container flash-container mt-3">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    {% if 'Lütfen bu sayfaya erişmek için giriş yapın' in message %}
+                        <div class="login-required-alert alert alert-{{ category }} alert-dismissible fade show shadow-sm border" role="alert">
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-lock me-2 fs-5"></i>
+                                <strong>{{ message }}</strong>
+                            </div>
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    {% endif %}
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+    </div>
+
+    <!-- Ana İçerik -->
+    {% block content %}{% endblock %}
+
+    <!-- Finansal Özet Offcanvas -->
+    <div class="offcanvas offcanvas-end" tabindex="-1" id="financialSummary">
+        <div class="offcanvas-header">
+            <h5 class="offcanvas-title">Finansal Özet</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+        </div>
+        <div class="offcanvas-body">
+            {% if g.patient %}
+            <div class="alert alert-light border">
+                <div class="row">
+                    <div class="col-12 mb-4">
+                        <!-- Doughnut Chart -->
+                        <div class="position-relative">
+                            <canvas id="paymentChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <!-- Finansal Detaylar -->
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <small>Toplam Tedavi Tutarı</small>
+                                <span class="fw-bold">{{ "%.2f"|format(g.total_treatment_cost) }} ₺</span>
+                            </div>
+                            <div class="progress" style="height: 6px">
+                                <div class="progress-bar bg-primary" style="width: 100%"></div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <small>Toplam Ödenen</small>
+                                <span class="fw-bold text-success">{{ "%.2f"|format(g.total_payments) }} ₺</span>
+                            </div>
+                            <div class="progress" style="height: 6px">
+                                <div class="progress-bar bg-success" style="width: {{ '%.0f'|format((g.total_payments / g.total_treatment_cost * 100) if g.total_treatment_cost > 0 else 0) }}%"></div>
+                            </div>
+                        </div>
+                        <div class="mb-0">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <small>Kalan Borç</small>
+                                <span class="fw-bold {% if g.remaining_balance > 0 %}text-danger{% else %}text-success{% endif %}">
+                                    {{ "%.2f"|format(g.remaining_balance) }} ₺
+                                </span>
+                            </div>
+                            <div class="progress" style="height: 6px">
+                                <div class="progress-bar bg-danger" style="width: {{ '%.0f'|format((g.remaining_balance / g.total_treatment_cost * 100) if g.total_treatment_cost > 0 else 0) }}%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="alert alert-info">
+                Lütfen finansal özeti görüntülemek için bir hasta seçin.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Bootstrap JS ve Popper.js -->
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.min.js"></script>
+    
+    <!-- Custom JavaScript -->
+    {% block scripts %}{% endblock %}
+    
+    <!-- Login Alert Auto-Dismiss Script -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Auto-dismiss login required alerts after 5 seconds
+            const loginAlerts = document.querySelectorAll('.login-required-alert');
+            loginAlerts.forEach(function(alert) {
+                setTimeout(function() {
+                    const bsAlert = new bootstrap.Alert(alert);
+                    bsAlert.close();
+                }, 5000);
+            });
+        });
+    </script>
+    
+    <!-- Theme Toggle Script -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const storedTheme = localStorage.getItem('theme') || 'auto';
+            const themeToggleBtn = document.getElementById('theme-toggle');
+            const themeIcon = themeToggleBtn.querySelector('i');
+            let tooltip = new bootstrap.Tooltip(themeToggleBtn);
+            
+            // Function to set the theme on the html element
+            const setTheme = (theme) => {
+                if (theme === 'auto') {
+                    // For auto theme, check system preference
+                    if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                        document.documentElement.setAttribute('data-bs-theme', 'dark');
+                    } else {
+                        document.documentElement.setAttribute('data-bs-theme', 'light');
+                    }
+                } else {
+                    // For explicit light/dark theme
+                    document.documentElement.setAttribute('data-bs-theme', theme);
+                }
+            };
+            
+            const setThemeIcon = (theme) => {
+                themeIcon.className = 'fas ';
+                if (theme === 'light') {
+                    themeIcon.className += 'fa-sun me-1';
+                    themeToggleBtn.setAttribute('title', 'Açık Tema');
+                } else if (theme === 'dark') {
+                    themeIcon.className += 'fa-moon me-1';
+                    themeToggleBtn.setAttribute('title', 'Koyu Tema');
+                } else {
+                    themeIcon.className += 'fa-circle-half-stroke me-1';
+                    themeToggleBtn.setAttribute('title', 'Otomatik Tema');
+                }
+                tooltip.dispose();
+                tooltip = new bootstrap.Tooltip(themeToggleBtn);
+            };
+            
+            // Initialize theme
+            setTheme(storedTheme);
+            setThemeIcon(storedTheme);
+            
+            // Add click handler to cycle through themes
+            themeToggleBtn.addEventListener('click', function() {
+                const currentTheme = localStorage.getItem('theme') || 'auto';
+                let newTheme;
+                
+                if (currentTheme === 'light') {
+                    newTheme = 'dark';
+                } else if (currentTheme === 'dark') {
+                    newTheme = 'auto';
+                } else {
+                    newTheme = 'light';
+                }
+                
+                localStorage.setItem('theme', newTheme);
+                setThemeIcon(newTheme);
+                setTheme(newTheme);
+            });
+            
+            // Listen for system theme changes when in auto mode
+            window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+                if (localStorage.getItem('theme') === 'auto') {
+                    setTheme('auto');
+                }
+            });
+        });
+    </script>
+    
+    <!-- Finansal Özet Grafiği -->
+    {% if g.patient %}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const ctx = document.getElementById('paymentChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Ödenen', 'Kalan'],
+                    datasets: [{
+                        data: [
+                            {{ "%.2f"|format(g.total_payments) }},
+                            {{ "%.2f"|format(g.remaining_balance if g.remaining_balance > 0 else 0) }}
+                        ],
+                        backgroundColor: [
+                            'rgba(40, 167, 69, 0.8)',  // success
+                            'rgba(220, 53, 69, 0.8)',  // danger
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                        }
+                    },
+                    cutout: '70%',
+                }
+            });
+        });
+    </script>
+    {% endif %}
+</body>
+</html> 
