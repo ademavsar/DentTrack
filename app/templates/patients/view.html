@@ -28,9 +28,6 @@
                     <a href="{{ url_for('patients.edit_patient', patient_id=patient.id) }}" class="btn btn-outline-primary me-2">
                         <i class="fas fa-edit me-1"></i> Hasta Bilgilerini Düzenle
                     </a>
-                    <a href="{{ url_for('patients.add_treatment', patient_id=patient.id) }}" class="btn btn-primary">
-                        <i class="fas fa-plus me-1"></i> Yeni Tedavi Ekle
-                    </a>
                 </div>
             </div>
         </div>
@@ -78,13 +75,14 @@
         </div>
     </div>
     
-    <!-- Tedaviler Tablosu -->
-    <div class="card border-0 shadow-sm">
+    <!-- Son Tedaviler (Recent Treatments) -->
+    <div class="card border-0 shadow-sm mb-4">
         <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center">
-            <h5 class="mb-0">Tedaviler</h5>
-            <div class="btn-group">
-                <button type="button" class="btn btn-sm btn-outline-secondary" id="showAllTreatments">Tümü</button>
-                <button type="button" class="btn btn-sm btn-outline-secondary" id="showUnpaidTreatments">Ödenmeyenler</button>
+            <h4 class="mb-0">Son Tedaviler</h4>
+            <div>
+                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addTreatmentModal">
+                    <i class="fas fa-plus me-1"></i> Yeni Tedavi
+                </button>
             </div>
         </div>
         <div class="card-body">
@@ -95,9 +93,8 @@
                         <tr>
                             <th>Tarih</th>
                             <th>Tedavi</th>
-                            <th>Notlar</th>
                             <th>Tutar</th>
-                            <th>Ödeme Durumu</th>
+                            <th>Notlar</th>
                             <th class="text-end">İşlemler</th>
                         </tr>
                     </thead>
@@ -106,23 +103,13 @@
                         <tr data-treatment-id="{{ treatment.id }}" data-is-paid="{{ 'true' if treatment.is_paid else 'false' }}">
                             <td>{{ treatment.treatment_date.strftime('%d.%m.%Y') }}</td>
                             <td>{{ treatment.treatment_type.name }}</td>
-                            <td>{{ treatment.notes or '-' }}</td>
                             <td>{{ "%.2f"|format(treatment.price) }} ₺</td>
-                            <td>
-                                {% if treatment.is_paid %}
-                                <span class="badge bg-success bg-opacity-10 text-success">Ödendi</span>
-                                {% else %}
-                                <span class="badge bg-danger bg-opacity-10 text-danger">Ödenmedi</span>
-                                {% endif %}
-                            </td>
+                            <td>{{ treatment.notes or '-' }}</td>
                             <td class="text-end">
-                                <a href="{{ url_for('patients.view_treatment', treatment_id=treatment.id) }}" class="btn btn-sm btn-outline-primary me-1">
-                                    <i class="fas fa-eye"></i>
-                                </a>
-                                <a href="{{ url_for('patients.edit_treatment', treatment_id=treatment.id) }}" class="btn btn-sm btn-outline-secondary me-1">
+                                <a href="{{ url_for('patients.edit_treatment', treatment_id=treatment.id) }}" class="btn btn-sm btn-outline-secondary me-1" title="Düzenle">
                                     <i class="fas fa-edit"></i>
                                 </a>
-                                <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteTreatmentModal{{ treatment.id }}">
+                                <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteTreatmentModal{{ treatment.id }}" title="Sil">
                                     <i class="fas fa-trash"></i>
                                 </button>
                                 
@@ -154,16 +141,210 @@
                 </table>
             </div>
             {% else %}
-            <div class="text-center py-5">
-                <div class="text-muted mb-3">
-                    <i class="fas fa-tooth fa-3x"></i>
+            <div class="text-center py-3">
+                <div class="text-muted mb-2">
+                    <i class="fas fa-tooth fa-2x"></i>
                 </div>
-                <p>Bu hastaya ait henüz tedavi kaydı bulunmuyor.</p>
-                <a href="{{ url_for('patients.add_treatment', patient_id=patient.id) }}" class="btn btn-primary">
-                    <i class="fas fa-plus me-1"></i> Yeni Tedavi Ekle
-                </a>
+                <p class="mb-0">Bu hastaya ait henüz tedavi kaydı bulunmuyor.</p>
             </div>
             {% endif %}
+        </div>
+    </div>
+    
+    <!-- Son Ödemeler (Recent Payments) -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center">
+            <h4 class="mb-0">Son Ödemeler</h4>
+            <div>
+                <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addPaymentModal">
+                    <i class="fas fa-plus me-1"></i> Yeni Ödeme
+                </button>
+            </div>
+        </div>
+        <div class="card-body">
+            {% if payments %}
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead>
+                        <tr>
+                            <th>Tarih</th>
+                            <th>Tutar</th>
+                            <th>Ödeme Yöntemi</th>
+                            <th>Notlar</th>
+                            <th class="text-end">İşlemler</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for payment in payments %}
+                        <tr>
+                            <td>{{ payment.payment_date.strftime('%d.%m.%Y') }}</td>
+                            <td>{{ "%.2f"|format(payment.amount) }} ₺</td>
+                            <td>
+                                {% if payment.payment_method == 'cash' %}
+                                <span class="badge bg-success bg-opacity-10 text-success">Nakit</span>
+                                {% elif payment.payment_method == 'credit_card' %}
+                                <span class="badge bg-primary bg-opacity-10 text-primary">Kredi Kartı</span>
+                                {% else %}
+                                <span class="badge bg-info bg-opacity-10 text-info">Karma</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ payment.notes or '-' }}</td>
+                            <td class="text-end">
+                                <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deletePaymentModal{{ payment.id }}" title="Sil">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                                
+                                <!-- Delete Payment Modal -->
+                                <div class="modal fade" id="deletePaymentModal{{ payment.id }}" tabindex="-1">
+                                    <div class="modal-dialog">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title">Ödeme Silme</h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                            </div>
+                                            <div class="modal-body">
+                                                <p class="mb-0">Bu ödemeyi silmek istediğinize emin misiniz?</p>
+                                                <p class="text-danger small mt-2 mb-0">Bu işlem geri alınamaz.</p>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                                                <form action="{{ url_for('patients.delete_payment', payment_id=payment.id) }}" method="post">
+                                                    <button type="submit" class="btn btn-danger">Ödemeyi Sil</button>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-3">
+                <div class="text-muted mb-2">
+                    <i class="fas fa-money-bill-wave fa-2x"></i>
+                </div>
+                <p class="mb-0">Bu hastaya ait henüz ödeme kaydı bulunmuyor.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Add Payment Modal -->
+    <div class="modal fade" id="addPaymentModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Yeni Ödeme Ekle</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form action="{{ url_for('patients.add_payment_for_patient', patient_id=patient.id) }}" method="post">
+                    <div class="modal-body">
+                        {% set has_unpaid_treatments = false %}
+                        {% for treatment in treatments %}
+                            {% if treatment.is_paid == False %}
+                                {% set has_unpaid_treatments = true %}
+                            {% endif %}
+                        {% endfor %}
+                        
+                        <div id="unpaidTreatmentContent" {% if not has_unpaid_treatments %}style="display: none;"{% endif %}>
+                            <div class="mb-3">
+                                <label for="treatment_id" class="form-label">Tedavi</label>
+                                <select class="form-select" id="treatment_id" name="treatment_id" required>
+                                    <option value="" selected disabled>Tedavi Seçin</option>
+                                    {% for treatment in treatments %}
+                                    {% if not treatment.is_paid %}
+                                    <option value="{{ treatment.id }}" data-price="{{ treatment.price }}">
+                                        {{ treatment.treatment_date.strftime('%d.%m.%Y') }} - {{ treatment.treatment_type.name }} ({{ "%.2f"|format(treatment.price) }} ₺)
+                                    </option>
+                                    {% endif %}
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="payment_amount" class="form-label">Toplam Ödeme Tutarı (₺)</label>
+                                <input type="number" step="0.01" class="form-control" id="payment_amount" name="amount" readonly>
+                                <div class="form-text">Toplam tutar, nakit ve kredi kartı ödemelerinin toplamıdır.</div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="cash_amount" class="form-label">Nakit Tutarı (₺)</label>
+                                    <input type="number" step="0.01" class="form-control" id="cash_amount" name="cash_amount" value="0.00">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="card_amount" class="form-label">Kredi Kartı Tutarı (₺)</label>
+                                    <input type="number" step="0.01" class="form-control" id="card_amount" name="card_amount" value="0.00">
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="payment_notes" class="form-label">Notlar</label>
+                                <textarea class="form-control" id="payment_notes" name="notes" rows="2"></textarea>
+                            </div>
+                            <input type="hidden" name="payment_method" value="mixed">
+                        </div>
+                        
+                        <div id="noUnpaidTreatmentsAlert" class="alert alert-warning" {% if has_unpaid_treatments %}style="display: none;"{% endif %}>
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            Bu hasta için ödenmemiş tedavi bulunmamaktadır. Ödeme eklemek için önce tedavi eklemelisiniz.
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                        <button type="submit" id="submitPaymentBtn" class="btn btn-success" {% if not has_unpaid_treatments %}disabled{% endif %}>Ödeme Ekle</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Treatment Modal -->
+    <div class="modal fade" id="addTreatmentModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Yeni Tedavi Ekle</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form action="{{ url_for('patients.add_treatment', patient_id=patient.id) }}" method="post">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="treatment_type" class="form-label">Tedavi Türü <span class="text-danger">*</span></label>
+                            <select class="form-select" id="treatment_type" name="treatment_type_id" required>
+                                <option value="" selected disabled>Tedavi Türü Seçin</option>
+                                {% for type in treatment_types %}
+                                <option value="{{ type.id }}" data-price="{{ type.base_price }}">{{ type.name }} ({{ "%.2f"|format(type.base_price) }} ₺)</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="treatment_date" class="form-label">Tedavi Tarihi <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control" id="treatment_date" name="treatment_date" 
+                                   value="{{ today_date }}" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="price" class="form-label">Fiyat (₺) <span class="text-danger">*</span></label>
+                            <input type="number" step="0.01" class="form-control" id="price" name="price" 
+                                   placeholder="0.00" required>
+                            <div class="form-text">Tedavi türü seçildiğinde otomatik doldurulur, değiştirebilirsiniz.</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="notes" class="form-label">Notlar</label>
+                            <textarea class="form-control" id="notes" name="notes" rows="3" placeholder="Tedavi hakkında notlar..."></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-1"></i> Tedaviyi Kaydet
+                        </button>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
 </div>
@@ -172,33 +353,97 @@
 {% block scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Tedavi filtreleme
-    const showAllBtn = document.getElementById('showAllTreatments');
-    const showUnpaidBtn = document.getElementById('showUnpaidTreatments');
+    // Check for unpaid treatments when payment modal is opened
+    const addPaymentModal = document.getElementById('addPaymentModal');
+    if (addPaymentModal) {
+        addPaymentModal.addEventListener('show.bs.modal', function() {
+            // Count unpaid treatments using data attributes
+            const unpaidTreatments = document.querySelectorAll('#treatmentsList tr[data-is-paid="false"]');
+            const hasUnpaidTreatments = unpaidTreatments.length > 0;
+            
+            // Show/hide appropriate content
+            const unpaidTreatmentContent = document.getElementById('unpaidTreatmentContent');
+            const noUnpaidTreatmentsAlert = document.getElementById('noUnpaidTreatmentsAlert');
+            const submitPaymentBtn = document.getElementById('submitPaymentBtn');
+            
+            if (unpaidTreatmentContent) {
+                unpaidTreatmentContent.style.display = hasUnpaidTreatments ? 'block' : 'none';
+            }
+            
+            if (noUnpaidTreatmentsAlert) {
+                noUnpaidTreatmentsAlert.style.display = hasUnpaidTreatments ? 'none' : 'block';
+            }
+            
+            if (submitPaymentBtn) {
+                submitPaymentBtn.disabled = !hasUnpaidTreatments;
+            }
+        });
+    }
     
-    if (showAllBtn && showUnpaidBtn) {
-        showAllBtn.addEventListener('click', function() {
-            document.querySelectorAll('#treatmentsList tr').forEach(row => {
-                row.style.display = '';
-            });
-            showAllBtn.classList.add('active');
-            showUnpaidBtn.classList.remove('active');
-        });
+    // Treatment selection for payment
+    const treatmentSelect = document.getElementById('treatment_id');
+    const paymentAmountInput = document.getElementById('payment_amount');
+    const cashAmountInput = document.getElementById('cash_amount');
+    const cardAmountInput = document.getElementById('card_amount');
+    
+    // Update total payment amount based on cash and card amounts
+    function updateTotalAmount() {
+        if (!cashAmountInput || !cardAmountInput || !paymentAmountInput) return;
         
-        showUnpaidBtn.addEventListener('click', function() {
-            document.querySelectorAll('#treatmentsList tr').forEach(row => {
-                if (row.dataset.isPaid === 'true') {
-                    row.style.display = 'none';
-                } else {
-                    row.style.display = '';
+        const cashAmount = parseFloat(cashAmountInput.value) || 0;
+        const cardAmount = parseFloat(cardAmountInput.value) || 0;
+        paymentAmountInput.value = (cashAmount + cardAmount).toFixed(2);
+    }
+    
+    // Add event listeners to cash and card amount inputs
+    if (cashAmountInput && cardAmountInput) {
+        cashAmountInput.addEventListener('input', updateTotalAmount);
+        cardAmountInput.addEventListener('input', updateTotalAmount);
+    }
+    
+    // When treatment is selected, update the default amounts
+    if (treatmentSelect && paymentAmountInput && cashAmountInput && cardAmountInput) {
+        treatmentSelect.addEventListener('change', function() {
+            const selectedOption = this.options[this.selectedIndex];
+            if (selectedOption && selectedOption.dataset.price) {
+                const totalPrice = parseFloat(selectedOption.dataset.price);
+                paymentAmountInput.value = totalPrice.toFixed(2);
+                // Set full amount to credit card by default
+                cashAmountInput.value = "0.00";
+                cardAmountInput.value = totalPrice.toFixed(2);
+                
+                // Enable submit button if disabled
+                const submitPaymentBtn = document.getElementById('submitPaymentBtn');
+                if (submitPaymentBtn) {
+                    submitPaymentBtn.disabled = false;
                 }
-            });
-            showUnpaidBtn.classList.add('active');
-            showAllBtn.classList.remove('active');
+            }
         });
-        
-        // Default active
-        showAllBtn.classList.add('active');
+    }
+    
+    // Initialize total amount calculation
+    updateTotalAmount();
+    
+    // Treatment Modal Type Selection
+    const treatmentTypeSelect = document.getElementById('treatment_type');
+    const priceInput = document.getElementById('price');
+    
+    // When treatment type is selected, update the price field
+    if (treatmentTypeSelect && priceInput) {
+        treatmentTypeSelect.addEventListener('change', function() {
+            const selectedOption = this.options[this.selectedIndex];
+            if (selectedOption && selectedOption.dataset.price) {
+                priceInput.value = parseFloat(selectedOption.dataset.price).toFixed(2);
+            }
+        });
+    }
+    
+    // Set today's date in the treatment date field if it exists
+    const treatmentDateInput = document.getElementById('treatment_date');
+    if (treatmentDateInput && !treatmentDateInput.value) {
+        const today = new Date();
+        const formattedDate = today.toISOString().substring(0, 10); // Format: YYYY-MM-DD
+        treatmentDateInput.value = formattedDate;
     }
 });
 </script>

@@ -8,107 +8,551 @@
         </div>
     </div>
 
-    <!-- Özet Kartları -->
-    <div class="row mb-4">
-        <div class="col-md-4">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-body">
-                    <h6 class="text-muted mb-2">Toplam Ödenmemiş Tedavi</h6>
-                    <h3>{{ unpaid_treatments|length }}</h3>
-                    <div class="text-muted small">Ödeme bekleyen tedavi sayısı</div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-body">
-                    <h6 class="text-muted mb-2">Toplam Borç Tutarı</h6>
-                    <h3 class="text-danger">{{ "%.2f"|format(total_debt) }} ₺</h3>
-                    <div class="text-muted small">Ödenmeyen toplam tutar</div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-body">
-                    <h6 class="text-muted mb-2">Ortalama Borç</h6>
-                    <h3>{{ "%.2f"|format(average_debt) }} ₺</h3>
-                    <div class="text-muted small">Hasta başına ortalama borç</div>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <!-- Filtreleme -->
     <div class="card border-0 shadow-sm mb-4">
         <div class="card-body">
-            <form action="{{ url_for('patients.unpaid_treatments') }}" method="get">
-                <div class="input-group">
-                    <span class="input-group-text border-0">
-                        <i class="fas fa-search text-muted"></i>
-                    </span>
-                    <input type="text" class="form-control border-0" name="search" 
-                           placeholder="Hasta ismi veya tedavi türü ile ara..." 
-                           value="{{ request.args.get('search', '') }}">
+            <div class="input-group">
+                <span class="input-group-text border-0">
+                    <i class="fas fa-search text-muted"></i>
+                </span>
+                <input type="text" class="form-control border-0" id="live-search" 
+                       placeholder="Hasta ismi veya tedavi türü ile ara..." 
+                       value="{{ request.args.get('search', '') }}">
+                <div class="spinner-border spinner-border-sm text-primary ms-2 d-none" id="search-spinner" role="status">
+                    <span class="visually-hidden">Aranıyor...</span>
                 </div>
-            </form>
+            </div>
         </div>
     </div>
 
     <!-- Ödenmemiş Tedaviler -->
     <div class="card border-0 shadow-sm">
         <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-hover align-middle">
-                    <thead>
-                        <tr>
-                            <th>Hasta</th>
-                            <th>Tedavi</th>
-                            <th>Tarih</th>
-                            <th>Tutar</th>
-                            <th class="text-end">İşlemler</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for treatment in unpaid_treatments %}
-                        <tr>
-                            <td>
-                                <a href="{{ url_for('patients.view_patient', patient_id=treatment.patient.id) }}" 
-                                class="text-decoration-none fw-medium">
-                                    {{ treatment.patient.first_name }} {{ treatment.patient.last_name }}
-                                </a>
-                                <div class="small text-muted">{{ treatment.patient.phone }}</div>
-                            </td>
-                            <td>{{ treatment.treatment_type.name }}</td>
-                            <td>{{ treatment.treatment_date.strftime('%d.%m.%Y') }}</td>
-                            <td>
-                                <span class="text-danger fw-medium">{{ "%.2f"|format(treatment.price) }} ₺</span>
-                            </td>
-                            <td class="text-end">
-                                <a href="{{ url_for('patients.add_payment', treatment_id=treatment.id) }}" 
-                                class="btn btn-sm btn-success">
-                                    <i class="fas fa-money-bill-wave me-1"></i> Ödeme Al
-                                </a>
-                                <a href="{{ url_for('patients.view_treatment', treatment_id=treatment.id) }}" 
-                                class="btn btn-sm btn-outline-primary ms-1">
-                                    <i class="fas fa-eye"></i>
-                                </a>
-                            </td>
-                        </tr>
-                        {% else %}
-                        <tr>
-                            <td colspan="5" class="text-center py-5">
-                                <div class="text-success mb-3">
-                                    <i class="fas fa-check-circle fa-3x"></i>
+            {% with 
+                items=unpaid_treatments,
+                is_treatment_view=true,
+                show_treatment=true,
+                table_id="treatments-table-body",
+                empty_message='<div class="text-success mb-3"><i class="fas fa-check-circle fa-3x"></i></div><p class="mb-0">Ödenmemiş tedavi bulunmamaktadır.</p>'
+            %}
+                {% include 'patients/partials/patients_table.html' %}
+            {% endwith %}
+        </div>
+    </div>
+    
+    <!-- Add Payment Modal -->
+    <div class="modal fade" id="addPaymentModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Yeni Ödeme Ekle</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="paymentForm" action="" method="post">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="patient_select" class="form-label">Hasta</label>
+                            <select class="form-select" id="patient_select" required>
+                                <option value="" selected disabled>Hasta Seçin</option>
+                                {% set unique_patients = {} %}
+                                {% for treatment in unpaid_treatments %}
+                                    {% if treatment.patient.id not in unique_patients %}
+                                        {% set _ = unique_patients.update({treatment.patient.id: treatment.patient}) %}
+                                        <option value="{{ treatment.patient.id }}">
+                                            {{ treatment.patient.first_name }} {{ treatment.patient.last_name }}
+                                        </option>
+                                    {% endif %}
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="treatment_id" class="form-label">Tedavi</label>
+                            <select class="form-select" id="treatment_id" name="treatment_id" required disabled>
+                                <option value="" selected disabled>Önce Hasta Seçin</option>
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="payment_amount" class="form-label">Toplam Ödeme Tutarı (₺)</label>
+                            <input type="number" step="0.01" class="form-control" id="payment_amount" name="amount" readonly>
+                            <div class="form-text">Toplam tutar, nakit ve kredi kartı ödemelerinin toplamıdır.</div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="cash_amount" class="form-label">Nakit Tutarı (₺)</label>
+                                <input type="number" step="0.01" class="form-control" id="cash_amount" name="cash_amount" value="0.00">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="card_amount" class="form-label">Kredi Kartı Tutarı (₺)</label>
+                                <input type="number" step="0.01" class="form-control" id="card_amount" name="card_amount" value="0.00">
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="payment_notes" class="form-label">Notlar</label>
+                            <textarea class="form-control" id="payment_notes" name="notes" rows="2"></textarea>
+                        </div>
+                        
+                        <input type="hidden" name="payment_method" value="mixed">
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                        <button type="submit" id="submitPaymentBtn" class="btn btn-success" disabled>Ödeme Ekle</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Quick Payment Modal -->
+    <div class="modal fade" id="quickPaymentModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Hızlı Ödeme</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="quickPaymentForm" action="" method="post">
+                    <div class="modal-body">
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="flex-shrink-0 me-3">
+                                <div class="bg-light rounded-circle p-3">
+                                    <i class="fas fa-tooth text-primary fs-4"></i>
                                 </div>
-                                <p class="mb-0">Ödenmemiş tedavi bulunmamaktadır.</p>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+                            </div>
+                            <div class="flex-grow-1">
+                                <h6 class="mb-0" id="quickPaymentPatient"></h6>
+                                <p class="text-muted mb-0 small" id="quickPaymentTreatment"></p>
+                            </div>
+                            <div class="flex-shrink-0 ms-3">
+                                <h5 class="text-danger mb-0" id="quickPaymentPrice"></h5>
+                            </div>
+                        </div>
+                        
+                        <hr>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="quick_cash_amount" class="form-label">Nakit Tutarı (₺)</label>
+                                <input type="number" step="0.01" class="form-control" id="quick_cash_amount" name="cash_amount" value="0.00">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="quick_card_amount" class="form-label">Kredi Kartı Tutarı (₺)</label>
+                                <input type="number" step="0.01" class="form-control" id="quick_card_amount" name="card_amount" value="0.00">
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="quick_payment_amount" class="form-label">Toplam Ödeme Tutarı (₺)</label>
+                            <input type="number" step="0.01" class="form-control" id="quick_payment_amount" name="amount" readonly>
+                            <div class="form-text">Toplam tutar, nakit ve kredi kartı ödemelerinin toplamıdır.</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="quick_payment_notes" class="form-label">Notlar</label>
+                            <textarea class="form-control" id="quick_payment_notes" name="notes" rows="2"></textarea>
+                        </div>
+                        
+                        <input type="hidden" name="payment_method" value="mixed">
+                        <input type="hidden" name="treatment_id" id="quick_treatment_id">
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                        <button type="submit" class="btn btn-success">Ödeme Ekle</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- WhatsApp Confirmation Modal -->
+    <div class="modal fade" id="whatsappConfirmModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">KVKK Bilgilendirmesi</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-warning d-flex align-items-center" role="alert">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <div>
+                            Mesaj gönderilmeden önce hastanın bilgilendirme onayı alınmalıdır 
+                            (<a href="https://www.kvkk.gov.tr/Icerik/7691/2023-692" target="_blank">KVKK gereği</a>). 
+                            Devam etmek istiyor musunuz?
+                        </div>
+                    </div>
+                    
+                    <p class="mb-2"><strong>Gönderilecek mesaj:</strong> <small class="text-muted">(düzenleyebilirsiniz)</small></p>
+                    <div class="card bg-body-tertiary border">
+                        <div class="card-body py-2 px-3">
+                            <textarea class="form-control border-0 bg-transparent" id="whatsappMessageText" rows="6" style="resize: vertical;"></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                    <a href="#" class="btn btn-primary" id="whatsappContinueBtn">
+                        <i class="fab fa-whatsapp me-1"></i> Devam Et
+                    </a>
+                </div>
             </div>
         </div>
     </div>
 </div>
-{% endblock %} 
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('live-search');
+    const tableBody = document.getElementById('treatments-table-body');
+    const spinner = document.getElementById('search-spinner');
+    let searchTimeout;
+    
+    // Payment Modal
+    const patientSelect = document.getElementById('patient_select');
+    const treatmentSelect = document.getElementById('treatment_id');
+    const paymentForm = document.getElementById('paymentForm');
+    const paymentAmountInput = document.getElementById('payment_amount');
+    const cashAmountInput = document.getElementById('cash_amount');
+    const cardAmountInput = document.getElementById('card_amount');
+    const submitPaymentBtn = document.getElementById('submitPaymentBtn');
+    
+    // Quick Payment Modal
+    const quickPaymentForm = document.getElementById('quickPaymentForm');
+    const quickCashAmountInput = document.getElementById('quick_cash_amount');
+    const quickCardAmountInput = document.getElementById('quick_card_amount');
+    const quickPaymentAmountInput = document.getElementById('quick_payment_amount');
+    const quickTreatmentIdInput = document.getElementById('quick_treatment_id');
+    const quickPaymentPatient = document.getElementById('quickPaymentPatient');
+    const quickPaymentTreatment = document.getElementById('quickPaymentTreatment');
+    const quickPaymentPrice = document.getElementById('quickPaymentPrice');
+    
+    // WhatsApp Reminder Functionality
+    const whatsappBtns = document.querySelectorAll('.whatsapp-reminder-btn');
+    const whatsappConfirmModalEl = document.getElementById('whatsappConfirmModal');
+    const whatsappConfirmModal = new bootstrap.Modal(whatsappConfirmModalEl);
+    const whatsappMessageText = document.getElementById('whatsappMessageText');
+    const whatsappContinueBtn = document.getElementById('whatsappContinueBtn');
+    
+    // Initialize quick payment modal when shown
+    const quickPaymentModal = document.getElementById('quickPaymentModal');
+    if (quickPaymentModal) {
+        quickPaymentModal.addEventListener('show.bs.modal', function(event) {
+            const button = event.relatedTarget;
+            
+            // Get data from button attributes
+            const treatmentId = button.getAttribute('data-treatment-id');
+            const patientId = button.getAttribute('data-patient-id');
+            const patientName = button.getAttribute('data-patient-name');
+            const treatmentName = button.getAttribute('data-treatment-name');
+            const treatmentDate = button.getAttribute('data-treatment-date');
+            const price = parseFloat(button.getAttribute('data-price'));
+            
+            // Set form values
+            quickTreatmentIdInput.value = treatmentId;
+            quickPaymentForm.action = `{{ url_for('patients.add_payment_for_patient', patient_id=0) }}`.replace('0', patientId);
+            
+            // Display treatment and patient info
+            quickPaymentPatient.textContent = patientName;
+            quickPaymentTreatment.textContent = `${treatmentDate} - ${treatmentName}`;
+            quickPaymentPrice.textContent = `${price.toFixed(2)} ₺`;
+            
+            // Set default payment values
+            quickCashAmountInput.value = "0.00";
+            quickCardAmountInput.value = price.toFixed(2);
+            quickPaymentAmountInput.value = price.toFixed(2);
+        });
+    }
+    
+    // Update total payment amount functions
+    function updateTotalAmount() {
+        if (!cashAmountInput || !cardAmountInput || !paymentAmountInput) return;
+        
+        const cashAmount = parseFloat(cashAmountInput.value) || 0;
+        const cardAmount = parseFloat(cardAmountInput.value) || 0;
+        paymentAmountInput.value = (cashAmount + cardAmount).toFixed(2);
+    }
+    
+    function updateQuickTotalAmount() {
+        if (!quickCashAmountInput || !quickCardAmountInput || !quickPaymentAmountInput) return;
+        
+        const cashAmount = parseFloat(quickCashAmountInput.value) || 0;
+        const cardAmount = parseFloat(quickCardAmountInput.value) || 0;
+        quickPaymentAmountInput.value = (cashAmount + cardAmount).toFixed(2);
+    }
+    
+    // Add event listeners for payment amounts
+    if (cashAmountInput && cardAmountInput) {
+        cashAmountInput.addEventListener('input', updateTotalAmount);
+        cardAmountInput.addEventListener('input', updateTotalAmount);
+    }
+    
+    if (quickCashAmountInput && quickCardAmountInput) {
+        quickCashAmountInput.addEventListener('input', updateQuickTotalAmount);
+        quickCardAmountInput.addEventListener('input', updateQuickTotalAmount);
+    }
+    
+    // When patient is selected, populate treatment dropdown
+    if (patientSelect && treatmentSelect) {
+        patientSelect.addEventListener('change', function() {
+            const patientId = this.value;
+            
+            // Enable treatment dropdown
+            treatmentSelect.disabled = false;
+            
+            // Clear existing options
+            treatmentSelect.innerHTML = '<option value="" selected disabled>Tedavi Seçin</option>';
+            
+            // Get all treatments for this patient
+            const treatments = document.querySelectorAll(`#treatments-table-body tr[data-is-paid="false"]`);
+            
+            treatments.forEach(treatmentRow => {
+                const patientLink = treatmentRow.querySelector('td:nth-child(2) a');
+                const rowPatientId = patientLink.href.split('/').pop();
+                
+                if (rowPatientId === patientId) {
+                    const treatmentId = treatmentRow.dataset.treatmentId;
+                    const treatmentPrice = treatmentRow.dataset.price;
+                    const treatmentName = treatmentRow.querySelector('td:nth-child(6)').textContent;
+                    const treatmentDate = treatmentRow.querySelector('td:nth-child(5)').textContent;
+                    
+                    const option = document.createElement('option');
+                    option.value = treatmentId;
+                    option.dataset.price = treatmentPrice;
+                    option.textContent = `${treatmentDate} - ${treatmentName} (${parseFloat(treatmentPrice).toFixed(2)} ₺)`;
+                    
+                    treatmentSelect.appendChild(option);
+                }
+            });
+            
+            // Update form action
+            paymentForm.action = `{{ url_for('patients.add_payment_for_patient', patient_id=0) }}`.replace('0', patientId);
+        });
+    }
+    
+    // When treatment is selected, update the default amounts
+    if (treatmentSelect && paymentAmountInput && cashAmountInput && cardAmountInput) {
+        treatmentSelect.addEventListener('change', function() {
+            const selectedOption = this.options[this.selectedIndex];
+            
+            if (selectedOption && selectedOption.dataset.price) {
+                const totalPrice = parseFloat(selectedOption.dataset.price);
+                paymentAmountInput.value = totalPrice.toFixed(2);
+                // Set full amount to credit card by default
+                cashAmountInput.value = "0.00";
+                cardAmountInput.value = totalPrice.toFixed(2);
+                
+                // Enable submit button
+                submitPaymentBtn.disabled = false;
+            } else {
+                // Disable submit button if no treatment selected
+                submitPaymentBtn.disabled = true;
+            }
+        });
+    }
+    
+    // Function to update the unpaid treatments list based on search
+    function updateTreatmentsList(searchTerm) {
+        // Show spinner
+        spinner.classList.remove('d-none');
+        
+        // Make AJAX request
+        fetch(`{{ url_for('patients.api_search_unpaid_treatments') }}?q=${encodeURIComponent(searchTerm)}`)
+            .then(response => {
+                // Add error handling for non-200 responses
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('Received unpaid treatments data:', data); // Debug: log received data
+                
+                // Clear table
+                tableBody.innerHTML = '';
+                
+                if (data.length === 0) {
+                    // Show no results message
+                    const noResults = document.createElement('tr');
+                    noResults.innerHTML = `
+                        <td colspan="8" class="text-center py-5">
+                            <div class="text-muted mb-3">
+                                <i class="fas fa-search fa-3x"></i>
+                            </div>
+                            <p class="mb-0">Aramanızla eşleşen ödenmemiş tedavi bulunmamaktadır.</p>
+                        </td>
+                    `;
+                    tableBody.appendChild(noResults);
+                } else {
+                    // Add treatment rows
+                    data.forEach(treatment => {
+                        const row = document.createElement('tr');
+                        row.setAttribute('data-treatment-id', treatment.id);
+                        row.setAttribute('data-is-paid', 'false');
+                        row.setAttribute('data-price', treatment.price);
+                        
+                        // Create row HTML
+                        row.innerHTML = `
+                            <td>${treatment.patient_id}</td>
+                            <td>
+                                <a href="{{ url_for('patients.view_patient', patient_id=0) }}".replace('0', treatment.patient_id) 
+                                class="text-decoration-none fw-medium">
+                                    ${treatment.patient_name}
+                                </a>
+                            </td>
+                            <td>${treatment.patient_phone}</td>
+                            <td>${treatment.patient_registration_date}</td>
+                            <td>${treatment.date}</td>
+                            <td>${treatment.treatment_type}</td>
+                            <td>
+                                <span class="text-danger fw-medium">${treatment.remaining_formatted}</span>
+                            </td>
+                            <td class="text-end">
+                                <button type="button" class="btn btn-sm btn-success me-1" 
+                                        data-bs-toggle="modal" 
+                                        data-bs-target="#quickPaymentModal" 
+                                        data-treatment-id="${treatment.id}"
+                                        data-patient-id="${treatment.patient_id}"
+                                        data-patient-name="${treatment.patient_name}"
+                                        data-treatment-name="${treatment.treatment_type}"
+                                        data-treatment-date="${treatment.date}"
+                                        data-price="${treatment.price}"
+                                        title="Ödeme Al">
+                                    <i class="fas fa-money-bill-wave me-1"></i> Ödeme Ekle
+                                </button>
+                                <button type="button" class="btn btn-sm btn-primary whatsapp-reminder-btn" 
+                                        ${treatment.patient_phone ? `
+                                        data-phone="${treatment.patient_phone}"
+                                        data-patient-name="${treatment.patient_name}"
+                                        data-treatment-name="${treatment.treatment_type}"
+                                        data-treatment-date="${treatment.date}"
+                                        data-price="${treatment.remaining_formatted.replace(' ₺', '')}"
+                                        title="WhatsApp Hatırlatması Gönder"
+                                        ` : `
+                                        disabled
+                                        title="Telefon numarası eksik"
+                                        `}>
+                                    <i class="fab fa-whatsapp me-1"></i> Hatırlat
+                                </button>
+                            </td>
+                        `;
+                        
+                        // Append the row to the table body
+                        tableBody.appendChild(row);
+                    });
+                    
+                    // Reattach WhatsApp button event handlers to newly created rows
+                    const newWhatsappBtns = tableBody.querySelectorAll('.whatsapp-reminder-btn');
+                    attachWhatsAppHandlers(newWhatsappBtns);
+                }
+                
+                // Hide spinner
+                spinner.classList.add('d-none');
+            })
+            .catch(error => {
+                console.error('Error fetching treatments:', error);
+                // Show error message in the table
+                tableBody.innerHTML = `
+                    <tr>
+                        <td colspan="8" class="text-center py-5">
+                            <div class="text-danger">
+                                <i class="fas fa-exclamation-triangle fa-3x"></i>
+                            </div>
+                            <p class="mb-0">Veri alınırken bir hata oluştu. Lütfen sayfayı yenileyin veya daha sonra tekrar deneyin.</p>
+                        </td>
+                    </tr>
+                `;
+                // Hide spinner
+                spinner.classList.add('d-none');
+            });
+    }
+    
+    // Add event listener for search input
+    searchInput.addEventListener('input', function() {
+        const searchTerm = this.value.trim();
+        
+        // Clear existing timeout
+        clearTimeout(searchTimeout);
+        
+        // Set a new timeout to delay the search (for better performance)
+        searchTimeout = setTimeout(() => {
+            updateTreatmentsList(searchTerm);
+        }, 300); // 300ms delay
+    });
+    
+    // Trigger search on page load if there's a value in the search box
+    if (searchInput.value.trim()) {
+        updateTreatmentsList(searchInput.value.trim());
+    }
+    
+    // Initialize total amount calculations
+    updateTotalAmount();
+    updateQuickTotalAmount();
+    
+    // Function to attach WhatsApp handlers to buttons
+    function attachWhatsAppHandlers(buttons) {
+        buttons.forEach(btn => {
+            btn.addEventListener('click', function() {
+                // Get data from button attributes
+                const phoneWithFormat = this.dataset.phone;
+                const patientName = this.dataset.patientName;
+                const treatmentName = this.dataset.treatmentName;
+                const treatmentDate = this.dataset.treatmentDate;
+                const price = this.dataset.price;
+                
+                // Remove all non-digit characters from phone number (5XX-XXX-XX-XX)
+                const phoneDigitsOnly = phoneWithFormat.replace(/\D/g, '');
+                
+                // Create initial message
+                const initialMessage = `Merhaba ${patientName},\n\nKliniğimizde almış olduğunuz '${treatmentName}' tedavinize ait (${treatmentDate}) ${price}₺ tutarında ödenmemiş bakiye bulunmaktadır.\n\nEn kısa sürede ödemenizi gerçekleştirmenizi rica ederiz.\n\nTeşekkürler,\nDiş Kliniği`;
+                
+                // Update textarea in modal with initial message
+                whatsappMessageText.value = initialMessage;
+                
+                // Add Turkey country code (90) and ensure the number starts with 5
+                const formattedPhone = '90' + phoneDigitsOnly;
+                
+                if (phoneDigitsOnly.length === 10 && phoneDigitsOnly.startsWith('5')) {
+                    // Store phone number for later use when continue button is clicked
+                    whatsappContinueBtn.dataset.phone = formattedPhone;
+                    
+                    // Show confirmation modal
+                    whatsappConfirmModal.show();
+                } else {
+                    alert('Telefon numarası geçersiz. WhatsApp hatırlatması gönderilemez.');
+                }
+            });
+        });
+    }
+    
+    // Attach handlers to initial buttons
+    attachWhatsAppHandlers(whatsappBtns);
+    
+    // Update the WhatsApp URL when continue button is clicked
+    whatsappContinueBtn.addEventListener('click', function(e) {
+        // Get the current message from the textarea
+        const currentMessage = whatsappMessageText.value.trim();
+        
+        // If message is empty, prevent default and show an alert
+        if (!currentMessage) {
+            e.preventDefault();
+            alert('Mesaj boş olamaz!');
+            return;
+        }
+        
+        // Get the stored phone number
+        const formattedPhone = this.dataset.phone;
+        
+        // Create the WhatsApp URL with the current message
+        const whatsappUrl = `https://wa.me/${formattedPhone}?text=${encodeURIComponent(currentMessage)}`;
+        
+        // Update the href attribute
+        this.href = whatsappUrl;
+    });
+});
+</script>
+{% endblock %}

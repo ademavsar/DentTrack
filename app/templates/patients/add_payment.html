@@ -54,40 +54,32 @@
         <div class="card-body">
             <form action="{{ url_for('patients.add_payment', treatment_id=treatment.id) }}" method="post" class="row g-3">
                 <div class="col-md-6">
-                    <label for="payment_date" class="form-label">Ödeme Tarihi <span class="text-danger">*</span></label>
+                    <label for="payment_date" class="form-label">Ödeme Tarihi</label>
                     <input type="date" class="form-control" id="payment_date" name="payment_date"
-                           value="{{ today_date }}" required>
+                           value="{{ today_date }}" readonly>
+                    <div class="form-text">Ödeme tarihi otomatik olarak bugün olarak ayarlanmıştır.</div>
                 </div>
                 
                 <div class="col-md-6">
-                    <label for="payment_method" class="form-label">Ödeme Yöntemi <span class="text-danger">*</span></label>
-                    <select class="form-select" id="payment_method" name="payment_method" required>
-                        <option value="cash" selected>Nakit</option>
-                        <option value="credit_card">Kredi Kartı</option>
-                        <option value="mixed">Karma (Nakit + Kredi Kartı)</option>
-                    </select>
-                </div>
-                
-                <div class="col-md-6">
-                    <label for="amount" class="form-label">Ödeme Tutarı (₺) <span class="text-danger">*</span></label>
+                    <label for="amount" class="form-label">Toplam Ödeme Tutarı (₺)</label>
                     <input type="number" step="0.01" class="form-control" id="amount" name="amount"
-                           value="{{ "%.2f"|format(remaining_amount) }}" required>
-                    <div class="form-text">Kalan borç tutarını girdik, değiştirebilirsiniz.</div>
+                           value="{{ "%.2f"|format(remaining_amount) }}" readonly>
+                    <div class="form-text">Toplam tutar, nakit ve kredi kartı ödemelerinin toplamı olarak hesaplanır.</div>
                 </div>
                 
-                <!-- Karma ödeme detayları (mixed seçildiğinde gösterilir) -->
-                <div id="mixedPaymentDetails" class="col-12 d-none">
+                <!-- Ödeme miktarları -->
+                <div class="col-12">
                     <div class="row g-3">
                         <div class="col-md-6">
                             <label for="cash_amount" class="form-label">Nakit Tutarı (₺) <span class="text-danger">*</span></label>
                             <input type="number" step="0.01" class="form-control" id="cash_amount" name="cash_amount" 
-                                   placeholder="0.00">
+                                   placeholder="0.00" value="0.00" required>
                         </div>
                         
                         <div class="col-md-6">
                             <label for="card_amount" class="form-label">Kredi Kartı Tutarı (₺) <span class="text-danger">*</span></label>
                             <input type="number" step="0.01" class="form-control" id="card_amount" name="card_amount" 
-                                   placeholder="0.00">
+                                   placeholder="0.00" value="{{ "%.2f"|format(remaining_amount) }}" required>
                         </div>
                     </div>
                 </div>
@@ -103,6 +95,9 @@
                     </button>
                     <a href="{{ url_for('patients.view_treatment', treatment_id=treatment.id) }}" class="btn btn-outline-secondary ms-2">İptal</a>
                 </div>
+                
+                <!-- Adding a hidden field for payment_method -->
+                <input type="hidden" name="payment_method" value="mixed">
             </form>
         </div>
     </div>
@@ -112,52 +107,23 @@
 {% block scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const paymentMethodSelect = document.getElementById('payment_method');
-    const mixedPaymentDetails = document.getElementById('mixedPaymentDetails');
     const cashAmountInput = document.getElementById('cash_amount');
     const cardAmountInput = document.getElementById('card_amount');
     const amountInput = document.getElementById('amount');
     
-    // Ödeme yöntemi değiştiğinde karma ödeme alanını göster/gizle
-    paymentMethodSelect.addEventListener('change', function() {
-        if (this.value === 'mixed') {
-            mixedPaymentDetails.classList.remove('d-none');
-            cashAmountInput.required = true;
-            cardAmountInput.required = true;
-            
-            // Karma ödeme detaylarını total miktarın yarısı olarak ayarla
-            const totalAmount = parseFloat(amountInput.value) || 0;
-            const halfAmount = (totalAmount / 2).toFixed(2);
-            cashAmountInput.value = halfAmount;
-            cardAmountInput.value = halfAmount;
-        } else {
-            mixedPaymentDetails.classList.add('d-none');
-            cashAmountInput.required = false;
-            cardAmountInput.required = false;
-        }
-    });
-    
-    // Karma ödeme miktarlarını değiştirince toplam tutarı güncelle
-    const updateMixedPaymentTotals = function() {
-        if (paymentMethodSelect.value === 'mixed') {
-            const cashAmount = parseFloat(cashAmountInput.value) || 0;
-            const cardAmount = parseFloat(cardAmountInput.value) || 0;
-            amountInput.value = (cashAmount + cardAmount).toFixed(2);
-        }
+    // Update total amount when cash or card amounts change
+    const updateTotalAmount = function() {
+        const cashAmount = parseFloat(cashAmountInput.value) || 0;
+        const cardAmount = parseFloat(cardAmountInput.value) || 0;
+        amountInput.value = (cashAmount + cardAmount).toFixed(2);
     };
     
-    cashAmountInput.addEventListener('input', updateMixedPaymentTotals);
-    cardAmountInput.addEventListener('input', updateMixedPaymentTotals);
+    // Add event listeners
+    cashAmountInput.addEventListener('input', updateTotalAmount);
+    cardAmountInput.addEventListener('input', updateTotalAmount);
     
-    // Toplam tutarı değiştirince karma ödeme miktarlarını güncelle
-    amountInput.addEventListener('input', function() {
-        if (paymentMethodSelect.value === 'mixed') {
-            const totalAmount = parseFloat(this.value) || 0;
-            const halfAmount = (totalAmount / 2).toFixed(2);
-            cashAmountInput.value = halfAmount;
-            cardAmountInput.value = halfAmount;
-        }
-    });
+    // Initialize total amount
+    updateTotalAmount();
 });
 </script>
 {% endblock %} 

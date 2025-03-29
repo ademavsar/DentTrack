@@ -206,28 +206,46 @@ def add_patient():
 @login_required
 def view_patient(patient_id):
     patient = Patient.query.get_or_404(patient_id)
-    treatments = Treatment.query.filter_by(patient_id=patient_id).all()
+    treatments = Treatment.query.filter_by(patient_id=patient_id).order_by(desc(Treatment.treatment_date)).all()
+    
+    # Get all payments for this patient's treatments
+    all_payments = []
     
     # Calculate financial summary
     total_treatment_cost = sum(t.price for t in treatments)
     
     total_payments = 0
     for treatment in treatments:
-        payments = Payment.query.filter_by(treatment_id=treatment.id).all()
+        payments = Payment.query.filter_by(treatment_id=treatment.id).order_by(desc(Payment.payment_date)).all()
+        # Add payments to the all_payments list
+        all_payments.extend(payments)
+        
         total_payments += sum(p.amount for p in payments)
         
         # Add payment status to treatment objects
         treatment_total_paid = sum(p.amount for p in payments)
         treatment.is_paid = treatment_total_paid >= treatment.price
     
+    # Sort all payments by payment_date, newest first
+    all_payments.sort(key=lambda p: p.payment_date, reverse=True)
+    
     remaining_balance = total_treatment_cost - total_payments
+    
+    # Get treatment types for the modal form
+    treatment_types = TreatmentType.query.all()
+    
+    # Get today's date for the treatment date field
+    today_date = datetime.now().strftime('%Y-%m-%d')
     
     return render_template('patients/view.html', 
                            patient=patient,
                            treatments=treatments,
+                           payments=all_payments,
                            total_treatment_cost=total_treatment_cost,
                            total_payments=total_payments,
-                           remaining_balance=remaining_balance)
+                           remaining_balance=remaining_balance,
+                           treatment_types=treatment_types,
+                           today_date=today_date)
 
 @bp.route('/patients/<int:patient_id>/edit', methods=['GET', 'POST'])
 @login_required
@@ -340,6 +358,12 @@ def unpaid_treatments():
     # Get unique patients with unpaid treatments
     unique_patients = set(t.patient.id for t in unpaid_treatments)
     average_debt = total_debt / len(unique_patients) if unique_patients else 0
+    
+    # Enrich treatment objects with payment information
+    for treatment in unpaid_treatments:
+        payments = Payment.query.filter_by(treatment_id=treatment.id).all()
+        paid_amount = sum(p.amount for p in payments)
+        treatment.remaining_amount = treatment.price - paid_amount
     
     return render_template('patients/unpaid_treatments.html',
                            unpaid_treatments=unpaid_treatments,
@@ -504,67 +528,67 @@ def delete_treatment(treatment_id):
 
 @bp.route('/treatments/<int:treatment_id>/payments/add', methods=['GET', 'POST'])
 def add_payment(treatment_id):
+    # This route is now deprecated. Use add_payment_for_patient instead.
+    # Redirect to the patient page where the modal can be used
+    treatment = Treatment.query.get_or_404(treatment_id)
+    return redirect(url_for('patients.view_patient', patient_id=treatment.patient_id))
+
+@bp.route('/patients/<int:patient_id>/add-payment', methods=['POST'])
+@login_required
+def add_payment_for_patient(patient_id):
+    """Add a payment directly from the patient profile page"""
+    patient = Patient.query.get_or_404(patient_id)
+    treatment_id = request.form.get('treatment_id')
     treatment = Treatment.query.get_or_404(treatment_id)
     
-    # Calculate remaining amount
-    payments = Payment.query.filter_by(treatment_id=treatment_id).all()
-    paid_amount = sum(p.amount for p in payments)
-    remaining_amount = max(0, treatment.price - paid_amount)
+    # Verify the treatment belongs to this patient
+    if treatment.patient_id != patient_id:
+        flash('Bu tedavi bu hastaya ait değil.', 'danger')
+        return redirect(url_for('patients.view_patient', patient_id=patient_id))
     
-    if request.method == 'POST':
-        # Get payment data
-        payment_date = datetime.strptime(request.form.get('payment_date'), '%Y-%m-%d')
-        payment_method = request.form.get('payment_method')
-        amount = float(request.form.get('amount'))
-        notes = request.form.get('notes')
+    # Get payment data
+    payment_method = 'mixed'  # Always use mixed method
+    amount = float(request.form.get('amount'))
+    cash_amount = float(request.form.get('cash_amount'))
+    card_amount = float(request.form.get('card_amount'))
+    notes = request.form.get('notes')
+    payment_date = datetime.now()  # Use current date and time
+    
+    try:
+        # Create payment record
+        payment = Payment(
+            treatment_id=treatment_id,
+            amount=amount,
+            payment_date=payment_date,
+            payment_method=payment_method,
+            notes=notes
+        )
+        db.session.add(payment)
+        db.session.flush()  # To get payment ID
         
-        try:
-            # Create payment record
-            payment = Payment(
-                treatment_id=treatment_id,
-                amount=amount,
-                payment_date=payment_date,
-                payment_method=payment_method,
-                notes=notes
-            )
-            db.session.add(payment)
-            db.session.flush()  # To get payment ID
-            
-            # For mixed payments, add details
-            if payment_method == 'mixed':
-                cash_amount = float(request.form.get('cash_amount'))
-                card_amount = float(request.form.get('card_amount'))
-                
-                cash_detail = PaymentDetail(
-                    payment_id=payment.id,
-                    payment_type='cash',
-                    amount=cash_amount
-                )
-                card_detail = PaymentDetail(
-                    payment_id=payment.id,
-                    payment_type='credit_card',
-                    amount=card_amount
-                )
-                
-                db.session.add(cash_detail)
-                db.session.add(card_detail)
-            
-            db.session.commit()
-            
-            flash('Ödeme başarıyla eklendi.', 'success')
-            return redirect(url_for('patients.view_treatment', treatment_id=treatment_id))
-        except Exception as e:
-            db.session.rollback()
-            flash(f'Ödeme eklenirken bir hata oluştu: {str(e)}', 'danger')
-            return redirect(url_for('patients.add_payment', treatment_id=treatment_id))
+        # Always create payment details for cash and card amounts
+        cash_detail = PaymentDetail(
+            payment_id=payment.id,
+            payment_type='cash',
+            amount=cash_amount
+        )
+        card_detail = PaymentDetail(
+            payment_id=payment.id,
+            payment_type='credit_card',
+            amount=card_amount
+        )
+        
+        db.session.add(cash_detail)
+        db.session.add(card_detail)
+        
+        db.session.commit()
+        
+        flash('Ödeme başarıyla eklendi.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Ödeme eklenirken bir hata oluştu: {str(e)}', 'danger')
     
-    # For GET request, prepare form
-    today_date = datetime.now().strftime('%Y-%m-%d')
-    
-    return render_template('patients/add_payment.html',
-                           treatment=treatment,
-                           remaining_amount=remaining_amount,
-                           today_date=today_date)
+    return redirect(url_for('patients.view_patient', patient_id=patient_id))
 
 @bp.route('/payments/<int:payment_id>/delete', methods=['POST'])
 def delete_payment(payment_id):
@@ -584,4 +608,133 @@ def delete_payment(payment_id):
     except Exception as e:
         db.session.rollback()
         flash(f'Ödeme silinirken bir hata oluştu: {str(e)}', 'danger')
-        return redirect(url_for('patients.view_treatment', treatment_id=treatment_id)) 
+        return redirect(url_for('patients.view_treatment', treatment_id=treatment_id))
+
+@bp.route('/api/patients/search')
+@login_required
+def api_search_patients():
+    """JSON API endpoint for live patient search"""
+    # Get search term
+    search = request.args.get('q', '')
+    
+    # Base query
+    query = Patient.query
+    
+    # Apply search filter if provided
+    if search:
+        search_term = f"%{search}%"
+        query = query.filter(
+            sa.or_(
+                Patient.first_name.ilike(search_term),
+                Patient.last_name.ilike(search_term),
+                Patient.phone.ilike(search_term),
+                Patient.tc_no.ilike(search_term)
+            )
+        )
+    
+    # Execute query with limit to avoid performance issues
+    patients = query.order_by(Patient.first_name).limit(50).all()
+    
+    # Prepare response data
+    result = []
+    for patient in patients:
+        treatments = Treatment.query.filter_by(patient_id=patient.id).all()
+        
+        # Get last treatment date
+        last_treatment_date = None
+        if treatments:
+            treatments.sort(key=lambda x: x.treatment_date, reverse=True)
+            last_treatment_date = treatments[0].treatment_date.strftime('%d.%m.%Y') if treatments[0].treatment_date else None
+        
+        # Calculate balance
+        total_treatment_cost = sum(t.price for t in treatments)
+        
+        total_paid = 0
+        for treatment in treatments:
+            payments = Payment.query.filter_by(treatment_id=treatment.id).all()
+            total_paid += sum(payment.amount for payment in payments)
+        
+        balance = total_treatment_cost - total_paid
+        
+        # Format the patient data
+        patient_data = {
+            'id': patient.id,
+            'name': f"{patient.first_name} {patient.last_name}",
+            'phone': patient.phone,
+            'tc_no': patient.tc_no,
+            'address': patient.address,
+            'registration_date': patient.registration_date.strftime('%d.%m.%Y'),
+            'last_treatment_date': last_treatment_date,
+            'balance': float(balance) if balance else 0,
+            'balance_formatted': f"{balance:.2f} ₺" if balance > 0 else (f"{abs(balance):.2f} ₺ Alacak" if balance < 0 else "-")
+        }
+        result.append(patient_data)
+    
+    return jsonify(result)
+
+@bp.route('/api/unpaid-treatments/search')
+@login_required
+def api_search_unpaid_treatments():
+    """JSON API endpoint for live unpaid treatments search"""
+    # Get search term
+    search = request.args.get('q', '')
+    
+    # Get all treatments
+    query = Treatment.query.join(Patient).join(TreatmentType)
+    
+    # Only get unpaid treatments
+    # Using a subquery to find treatments with insufficient payments
+    unpaid_subquery = db.session.query(
+        Treatment.id.label('treatment_id'),
+        func.sum(Payment.amount).label('paid_amount')
+    ).outerjoin(Payment).group_by(Treatment.id).subquery()
+    
+    query = query.outerjoin(
+        unpaid_subquery, 
+        Treatment.id == unpaid_subquery.c.treatment_id
+    ).filter(
+        sa.or_(
+            unpaid_subquery.c.paid_amount.is_(None),
+            unpaid_subquery.c.paid_amount < Treatment.price
+        )
+    )
+    
+    # Apply search filter if provided
+    if search:
+        search_term = f"%{search}%"
+        query = query.filter(
+            sa.or_(
+                Patient.first_name.ilike(search_term),
+                Patient.last_name.ilike(search_term),
+                TreatmentType.name.ilike(search_term)
+            )
+        )
+    
+    # Execute query with limit
+    unpaid_treatments = query.order_by(desc(Treatment.treatment_date)).limit(50).all()
+    
+    # Prepare response data
+    result = []
+    for treatment in unpaid_treatments:
+        # Calculate remaining amount
+        payments = Payment.query.filter_by(treatment_id=treatment.id).all()
+        paid_amount = sum(p.amount for p in payments)
+        remaining = treatment.price - paid_amount
+        
+        # Format the treatment data
+        treatment_data = {
+            'id': treatment.id,
+            'patient_id': treatment.patient.id,
+            'patient_name': f"{treatment.patient.first_name} {treatment.patient.last_name}",
+            'patient_phone': treatment.patient.phone,
+            'patient_registration_date': treatment.patient.registration_date.strftime('%d.%m.%Y'),
+            'treatment_type': treatment.treatment_type.name,
+            'date': treatment.treatment_date.strftime('%d.%m.%Y'),
+            'price': float(treatment.price),
+            'price_formatted': f"{treatment.price:.2f} ₺",
+            'remaining': float(remaining),
+            'remaining_formatted': f"{remaining:.2f} ₺"
+        }
+        result.append(treatment_data)
+    
+    return jsonify(result) 

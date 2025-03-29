@@ -3,6 +3,10 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_login import LoginManager
 import os
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Create extension instances
 db = SQLAlchemy()
@@ -24,7 +28,8 @@ def create_app(config=None):
         ALLOW_EMPTY_DB=True,
         SEED_DB=False,
         SESSION_TYPE='filesystem',  # Ensure session is properly configured
-        PERMANENT_SESSION_LIFETIME=86400  # Session lifetime in seconds (24 hours)
+        PERMANENT_SESSION_LIFETIME=86400,  # Session lifetime in seconds (24 hours)
+        TEMPLATES_AUTO_RELOAD=False  # Added TEMPLATES_AUTO_RELOAD configuration
     )
     
     # Load configuration based on environment
@@ -57,6 +62,10 @@ def create_app(config=None):
     # Initialize extensions with app
     db.init_app(app)
     migrate.init_app(app, db)
+    
+    # Enable template auto-reload in development
+    if app.config.get('TEMPLATES_AUTO_RELOAD'):
+        app.jinja_env.auto_reload = True
     
     # Initialize Flask-Login
     login_manager.init_app(app)

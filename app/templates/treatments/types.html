@@ -21,8 +21,7 @@
                         <tr>
                             <th>ID</th>
                             <th>Tedavi Adı</th>
-                            <th>Açıklama</th>
-                            <th>Temel Fiyat</th>
+                            <th>Tedavi Ücreti</th>
                             <th class="text-end">İşlemler</th>
                         </tr>
                     </thead>
@@ -31,17 +30,18 @@
                         <tr>
                             <td>{{ type.id }}</td>
                             <td>{{ type.name }}</td>
-                            <td>{{ type.description or '-' }}</td>
                             <td>{{ "%.2f"|format(type.base_price) }} ₺</td>
                             <td class="text-end">
                                 <button class="btn btn-sm btn-outline-primary me-1" 
                                         data-bs-toggle="modal" 
-                                        data-bs-target="#editTreatmentTypeModal{{ type.id }}">
+                                        data-bs-target="#editTreatmentTypeModal{{ type.id }}"
+                                        title="Düzenle">
                                     <i class="fas fa-edit"></i>
                                 </button>
                                 <button class="btn btn-sm btn-outline-danger" 
                                         data-bs-toggle="modal" 
-                                        data-bs-target="#deleteTreatmentTypeModal{{ type.id }}">
+                                        data-bs-target="#deleteTreatmentTypeModal{{ type.id }}"
+                                        title="Sil">
                                     <i class="fas fa-trash"></i>
                                 </button>
                             </td>
@@ -62,11 +62,7 @@
                                                 <input type="text" class="form-control" id="name{{ type.id }}" name="name" value="{{ type.name }}" required>
                                             </div>
                                             <div class="mb-3">
-                                                <label for="description{{ type.id }}" class="form-label">Açıklama</label>
-                                                <textarea class="form-control" id="description{{ type.id }}" name="description" rows="2">{{ type.description }}</textarea>
-                                            </div>
-                                            <div class="mb-3">
-                                                <label for="base_price{{ type.id }}" class="form-label">Temel Fiyat (₺)</label>
+                                                <label for="base_price{{ type.id }}" class="form-label">Tedavi Ücreti (₺)</label>
                                                 <input type="number" step="0.01" class="form-control" id="base_price{{ type.id }}" name="base_price" value="{{ "%.2f"|format(type.base_price) }}" required>
                                             </div>
                                         </div>
@@ -104,7 +100,7 @@
                         </div>
                         {% else %}
                         <tr>
-                            <td colspan="5" class="text-center">
+                            <td colspan="4" class="text-center">
                                 <div class="py-4">
                                     <p class="mb-1 text-muted"><i class="fas fa-info-circle me-1"></i> Henüz tedavi türü bulunamadı.</p>
                                     <p class="mb-0 small">
@@ -136,11 +132,7 @@
                         <input type="text" class="form-control" id="name" name="name" required>
                     </div>
                     <div class="mb-3">
-                        <label for="description" class="form-label">Açıklama</label>
-                        <textarea class="form-control" id="description" name="description" rows="2"></textarea>
-                    </div>
-                    <div class="mb-3">
-                        <label for="base_price" class="form-label">Temel Fiyat (₺)</label>
+                        <label for="base_price" class="form-label">Tedavi Ücreti (₺)</label>
                         <input type="number" step="0.01" class="form-control" id="base_price" name="base_price" value="0.00" required>
                     </div>
                 </div>

@@ -7,89 +7,242 @@
             <h2>Hastalar</h2>
         </div>
         <div class="col text-end">
-            <a href="{{ url_for('patients.add_patient') }}" class="btn btn-primary">
+            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addPatientModal">
                 <i class="fas fa-plus me-1"></i> Yeni Hasta
-            </a>
+            </button>
         </div>
     </div>
 
     <!-- Arama ve Filtreleme -->
     <div class="card border-0 shadow-sm mb-4">
         <div class="card-body">
-            <form action="{{ url_for('patients.list_patients') }}" method="get">
-                <div class="input-group">
-                    <span class="input-group-text border-0">
-                        <i class="fas fa-search text-muted"></i>
-                    </span>
-                    <input type="text" class="form-control border-0" name="search" 
-                           placeholder="İsim, telefon veya TC no ile ara..." 
-                           value="{{ request.args.get('search', '') }}">
+            <div class="input-group">
+                <span class="input-group-text border-0">
+                    <i class="fas fa-search text-muted"></i>
+                </span>
+                <input type="text" class="form-control border-0" id="live-search" 
+                       placeholder="İsim, telefon veya TC no ile ara..." 
+                       value="{{ request.args.get('search', '') }}">
+                <div class="spinner-border spinner-border-sm text-primary ms-2 d-none" id="search-spinner" role="status">
+                    <span class="visually-hidden">Aranıyor...</span>
                 </div>
-            </form>
+            </div>
         </div>
     </div>
 
     <!-- Hasta Listesi -->
     <div class="card border-0 shadow-sm">
         <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-hover align-middle">
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Ad Soyad</th>
-                            <th>Telefon</th>
-                            <th>Kayıt Tarihi</th>
-                            <th>Son İşlem</th>
-                            <th>Kalan Borç</th>
-                            <th class="text-end">İşlemler</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for patient in patients %}
-                        <tr>
-                            <td>{{ patient.id }}</td>
+            {% with 
+                items=patients,
+                is_treatment_view=false,
+                show_treatment=true,
+                table_id="patients-table-body",
+                empty_message='<div class="text-muted"><i class="fas fa-search me-2"></i>Aramanızla eşleşen hasta bulunamadı.</div>' if request.args.get('search') else '<div class="text-muted"><i class="fas fa-user-plus me-2"></i>Henüz hasta kaydı bulunmamaktadır.</div>'
+            %}
+                {% include 'patients/partials/patients_table.html' %}
+            {% endwith %}
+        </div>
+    </div>
+</div>
+
+<!-- Add Patient Modal -->
+<div class="modal fade" id="addPatientModal" tabindex="-1" aria-labelledby="addPatientModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addPatientModalLabel">Yeni Hasta Kaydı</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{{ url_for('patients.add_patient') }}" method="post">
+                <div class="modal-body">
+                    <!-- Zorunlu Bilgiler -->
+                    <div class="mb-3">
+                        <label for="first_name" class="form-label">Ad <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="first_name" name="first_name" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="last_name" class="form-label">Soyad <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="last_name" name="last_name" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="phone" class="form-label">Telefon <span class="text-danger">*</span></label>
+                        <input type="tel" class="form-control phone-mask" id="phone" name="phone" 
+                               placeholder="5XX-XXX-XX-XX" pattern="5[0-9]{2}-[0-9]{3}-[0-9]{2}-[0-9]{2}" required>
+                    </div>
+                    
+                    <!-- Opsiyonel Bilgiler -->
+                    <div class="mb-3">
+                        <label for="tc_no" class="form-label">TC Kimlik No</label>
+                        <input type="text" class="form-control" id="tc_no" name="tc_no" 
+                               placeholder="11 haneli TC Kimlik No" maxlength="11" pattern="[0-9]{11}">
+                        <div class="form-text">11 haneli rakam</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="address" class="form-label">Adres</label>
+                        <textarea class="form-control" id="address" name="address" rows="2"></textarea>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="notes" class="form-label">Notlar</label>
+                        <textarea class="form-control" id="notes" name="notes" rows="2"></textarea>
+                        <div class="form-text">Hasta hakkında önemli bilgiler (alerjiler, kronik hastalıklar, vb.)</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-1"></i> Kaydet
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('live-search');
+    const tableBody = document.getElementById('patients-table-body');
+    const spinner = document.getElementById('search-spinner');
+    let searchTimeout;
+    
+    // Function to update the patient list based on search
+    function updatePatientList(searchTerm) {
+        // Show spinner
+        spinner.classList.remove('d-none');
+        
+        // Make AJAX request
+        fetch(`{{ url_for('patients.api_search_patients') }}?q=${encodeURIComponent(searchTerm)}`)
+            .then(response => {
+                // Add error handling for non-200 responses
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('Received data:', data); // Debug: log received data
+                
+                // Clear table
+                tableBody.innerHTML = '';
+                
+                if (data.length === 0) {
+                    // Show no results message
+                    const noResults = document.createElement('tr');
+                    noResults.innerHTML = `
+                        <td colspan="8" class="text-center py-4">
+                            <div class="text-muted">
+                                <i class="fas fa-search me-2"></i>
+                                Aramanızla eşleşen hasta bulunamadı.
+                            </div>
+                        </td>
+                    `;
+                    tableBody.appendChild(noResults);
+                } else {
+                    // Add patient rows
+                    data.forEach(patient => {
+                        const row = document.createElement('tr');
+                        
+                        // Balance CSS class
+                        let balanceClass = 'text-muted';
+                        if (patient.balance > 0) {
+                            balanceClass = 'text-danger fw-medium';
+                        } else if (patient.balance < 0) {
+                            balanceClass = 'text-success fw-medium';
+                        }
+                        
+                        // Create row HTML
+                        row.innerHTML = `
+                            <td>${patient.id}</td>
                             <td>
-                                <a href="{{ url_for('patients.view_patient', patient_id=patient.id) }}" 
+                                <a href="{{ url_for('patients.view_patient', patient_id=0) }}".replace('0', patient.id) 
                                    class="text-decoration-none fw-medium">
-                                    {{ patient.first_name }} {{ patient.last_name }}
+                                    ${patient.name}
                                 </a>
                             </td>
-                            <td>{{ patient.phone }}</td>
-                            <td>{{ patient.registration_date.strftime('%d.%m.%Y') }}</td>
+                            <td>${patient.phone}</td>
+                            <td>${patient.registration_date}</td>
                             <td>
-                                {% if patient.last_treatment_date %}
-                                {{ patient.last_treatment_date.strftime('%d.%m.%Y') }}
-                                {% else %}
-                                <span class="text-muted">-</span>
-                                {% endif %}
+                                ${patient.last_treatment_date ? patient.last_treatment_date : '<span class="text-muted">-</span>'}
                             </td>
                             <td>
-                                {% if patient.balance and patient.balance > 0 %}
-                                <span class="text-danger fw-medium">{{ "%.2f"|format(patient.balance) }} ₺</span>
-                                {% elif patient.balance and patient.balance < 0 %}
-                                <span class="text-success fw-medium">{{ "%.2f"|format(patient.balance|abs) }} ₺ Alacak</span>
-                                {% else %}
                                 <span class="text-muted">-</span>
-                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="${balanceClass}">${patient.balance_formatted}</span>
                             </td>
                             <td class="text-end">
-                                <a href="{{ url_for('patients.view_patient', patient_id=patient.id) }}" 
-                                   class="btn btn-sm btn-outline-primary me-1">
-                                    <i class="fas fa-eye"></i>
-                                </a>
-                                <a href="{{ url_for('patients.edit_patient', patient_id=patient.id) }}" 
-                                   class="btn btn-sm btn-outline-secondary me-1">
+                                <button type="button" class="btn btn-sm btn-outline-secondary me-1" 
+                                        data-bs-toggle="modal" 
+                                        data-bs-target="#editPatientModal${patient.id}" title="Düzenle">
                                     <i class="fas fa-edit"></i>
-                                </a>
+                                </button>
                                 <button type="button" class="btn btn-sm btn-outline-danger" 
                                         data-bs-toggle="modal" 
-                                        data-bs-target="#deletePatientModal{{ patient.id }}">
+                                        data-bs-target="#deletePatientModal${patient.id}" title="Sil">
                                     <i class="fas fa-trash"></i>
                                 </button>
                                 
+                                <!-- Edit Modal -->
+                                <div class="modal fade" id="editPatientModal${patient.id}" tabindex="-1">
+                                    <div class="modal-dialog">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title">Hasta Düzenleme</h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                            </div>
+                                            <form action="{{ url_for('patients.edit_patient', patient_id=0) }}".replace('0', patient.id) method="post">
+                                                <div class="modal-body">
+                                                    <div class="mb-3">
+                                                        <label for="first_name${patient.id}" class="form-label">Ad <span class="text-danger">*</span></label>
+                                                        <input type="text" class="form-control" id="first_name${patient.id}" name="first_name" 
+                                                               value="${patient.name.split(' ')[0]}" required>
+                                                    </div>
+                                                    
+                                                    <div class="mb-3">
+                                                        <label for="last_name${patient.id}" class="form-label">Soyad <span class="text-danger">*</span></label>
+                                                        <input type="text" class="form-control" id="last_name${patient.id}" name="last_name" 
+                                                               value="${patient.name.split(' ').slice(1).join(' ')}" required>
+                                                    </div>
+                                                    
+                                                    <div class="mb-3">
+                                                        <label for="phone${patient.id}" class="form-label">Telefon <span class="text-danger">*</span></label>
+                                                        <input type="tel" class="form-control phone-mask" id="phone${patient.id}" name="phone" 
+                                                               value="${patient.phone}" pattern="5[0-9]{2}-[0-9]{3}-[0-9]{2}-[0-9]{2}" 
+                                                               placeholder="5XX-XXX-XX-XX" required>
+                                                    </div>
+                                                    
+                                                    <div class="mb-3">
+                                                        <label for="tc_no${patient.id}" class="form-label">TC Kimlik No</label>
+                                                        <input type="text" class="form-control" id="tc_no${patient.id}" name="tc_no" 
+                                                               value="${patient.tc_no || ''}" maxlength="11" pattern="[0-9]{11}">
+                                                        <div class="form-text">Opsiyonel, 11 haneli rakam</div>
+                                                    </div>
+                                                    
+                                                    <div class="mb-3">
+                                                        <label for="address${patient.id}" class="form-label">Adres</label>
+                                                        <textarea class="form-control" id="address${patient.id}" name="address" rows="3">${patient.address || ''}</textarea>
+                                                    </div>
+                                                </div>
+                                                <div class="modal-footer">
+                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                                                    <button type="submit" class="btn btn-primary">
+                                                        <i class="fas fa-save me-1"></i> Değişiklikleri Kaydet
+                                                    </button>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                                
                                 <!-- Delete Modal -->
-                                <div class="modal fade" id="deletePatientModal{{ patient.id }}" tabindex="-1">
+                                <div class="modal fade" id="deletePatientModal${patient.id}" tabindex="-1">
                                     <div class="modal-dialog">
                                         <div class="modal-content">
                                             <div class="modal-header">
@@ -98,16 +251,16 @@
                                             </div>
                                             <div class="modal-body">
                                                 <p class="mb-1">
-                                                    <strong>{{ patient.first_name }} {{ patient.last_name }}</strong> 
+                                                    <strong>${patient.name}</strong> 
                                                     hastasını silmek istediğinize emin misiniz?
                                                 </p>
                                                 <p class="text-danger small mb-0">
-                                                    Bu işlem geri alınamaz ve hastaya ait tüm tedavi ve ödeme kayıtları da silinecektir.
+                                                    Bu işlem geri alınamaz. Tüm veriler kalıcı olarak silinir.
                                                 </p>
                                             </div>
                                             <div class="modal-footer">
                                                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
-                                                <form action="{{ url_for('patients.delete_patient', patient_id=patient.id) }}" method="post">
+                                                <form action="{{ url_for('patients.delete_patient', patient_id=0) }}".replace('0', patient.id) method="post">
                                                     <button type="submit" class="btn btn-danger">Hastayı Sil</button>
                                                 </form>
                                             </div>
@@ -115,28 +268,99 @@
                                     </div>
                                 </div>
                             </td>
-                        </tr>
-                        {% else %}
-                        <tr>
-                            <td colspan="7" class="text-center py-4">
-                                {% if request.args.get('search') %}
-                                <div class="text-muted">
-                                    <i class="fas fa-search me-2"></i>
-                                    Aramanızla eşleşen hasta bulunamadı.
-                                </div>
-                                {% else %}
-                                <div class="text-muted">
-                                    <i class="fas fa-user-plus me-2"></i>
-                                    Henüz hasta kaydı bulunmamaktadır.
-                                </div>
-                                {% endif %}
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-</div>
+                        `;
+                        
+                        // Append the row to the table body
+                        tableBody.appendChild(row);
+                    });
+                }
+                
+                // Hide spinner
+                spinner.classList.add('d-none');
+            })
+            .catch(error => {
+                console.error('Error fetching patients:', error);
+                // Show error message in the table
+                tableBody.innerHTML = `
+                    <tr>
+                        <td colspan="8" class="text-center py-4">
+                            <div class="text-danger">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                Veri alınırken bir hata oluştu. Lütfen sayfayı yenileyin veya daha sonra tekrar deneyin.
+                            </div>
+                        </td>
+                    </tr>
+                `;
+                // Hide spinner
+                spinner.classList.add('d-none');
+            });
+    }
+    
+    // Add event listener for search input
+    searchInput.addEventListener('input', function() {
+        const searchTerm = this.value.trim();
+        
+        // Clear existing timeout
+        clearTimeout(searchTimeout);
+        
+        // Show spinner for searches
+        if (searchTerm.length > 0) {
+            spinner.classList.remove('d-none');
+        } else {
+            spinner.classList.add('d-none');
+        }
+        
+        // Set a new timeout to delay the search (for better performance)
+        searchTimeout = setTimeout(() => {
+            updatePatientList(searchTerm);
+        }, 300); // 300ms delay
+    });
+    
+    // Trigger search on page load if there's a value in the search box
+    if (searchInput.value.trim()) {
+        updatePatientList(searchInput.value.trim());
+    }
+
+    // Phone input masking
+    const phoneInputs = document.querySelectorAll('.phone-mask');
+    
+    phoneInputs.forEach(input => {
+        input.addEventListener('input', function(e) {
+            let value = e.target.value.replace(/\D/g, ''); // Remove non-digits
+            
+            // Limit to 10 digits (5XX-XXX-XX-XX)
+            if (value.length > 10) {
+                value = value.slice(0, 10);
+            }
+            
+            // Apply mask based on input length
+            let formattedValue = '';
+            if (value.length > 0) {
+                formattedValue += value.slice(0, 3);
+            }
+            if (value.length > 3) {
+                formattedValue += '-' + value.slice(3, 6);
+            }
+            if (value.length > 6) {
+                formattedValue += '-' + value.slice(6, 8);
+            }
+            if (value.length > 8) {
+                formattedValue += '-' + value.slice(8, 10);
+            }
+            
+            e.target.value = formattedValue;
+        });
+        
+        // Validate on form submission
+        input.closest('form')?.addEventListener('submit', function(e) {
+            const phoneValue = input.value.replace(/-/g, '');
+            if (phoneValue.length !== 10 || !phoneValue.startsWith('5')) {
+                input.setCustomValidity('Lütfen geçerli bir telefon numarası girin (5XX-XXX-XX-XX)');
+            } else {
+                input.setCustomValidity('');
+            }
+        });
+    });
+});
+</script>
 {% endblock %} 

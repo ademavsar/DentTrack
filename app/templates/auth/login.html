@@ -3,13 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ title }} - Moda Dent</title>
+    <title>{{ title }} - DentTrack</title>
     <!-- Favicon -->
     <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}">
     <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Font Awesome -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <style>
         body {
             display: flex;
@@ -43,7 +45,72 @@
             background-color: var(--bs-body-bg);
             border-color: var(--bs-border-color);
         }
-        /* Enhanced alert styling */
+        /* Toast notification styling */
+        #toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1090;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .custom-toast {
+            min-width: 260px;
+            max-width: 320px;
+            padding: 10px 15px;
+            border-radius: 6px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            animation: toastSlideIn 0.3s ease-out;
+            backdrop-filter: blur(4px);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .toast-success {
+            background-color: rgba(25, 135, 84, 0.95);
+            color: white;
+        }
+        .toast-danger {
+            background-color: rgba(220, 53, 69, 0.95);
+            color: white;
+        }
+        .toast-info {
+            background-color: rgba(13, 110, 253, 0.95);
+            color: white;
+        }
+        .toast-warning {
+            background-color: rgba(255, 193, 7, 0.95);
+            color: #212529;
+        }
+        .toast-content {
+            display: flex;
+            align-items: center;
+            flex-grow: 1;
+        }
+        .toast-close {
+            background: transparent;
+            border: none;
+            color: inherit;
+            font-size: 1.1rem;
+            margin-left: 10px;
+            cursor: pointer;
+            opacity: 0.8;
+        }
+        .toast-close:hover {
+            opacity: 1;
+        }
+        @keyframes toastSlideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        /* Legacy alert styling (keeping for reference) */
         .login-alert {
             border-radius: 8px;
             padding: 1rem;
@@ -60,42 +127,56 @@
 </head>
 <body>
     <!-- Theme Toggle Button -->
-    <button class="btn btn-link theme-toggle" 
-            id="theme-toggle" 
-            type="button" 
-            data-bs-toggle="tooltip" 
-            data-bs-placement="bottom" 
-            title="Tema Değiştir">
-        <i class="fas fa-sun theme-icon-active"></i>
-    </button>
+    <div class="mode-switch position-absolute top-0 end-0 m-3">
+        <button title="Use dark mode" id="dark" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-moon fs-5"></i>
+        </button>
+        <button title="Use light mode" id="light" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-sun fs-5"></i>
+        </button>
+        <button title="Use system preferred mode" id="system" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-display fs-5"></i>
+        </button>
+    </div>
+
+    <!-- Toast Notifications Container -->
+    <div id="toast-container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    {% if category == 'error' %}
+                        {% set category = 'danger' %}
+                    {% elif category not in ['success', 'danger', 'warning', 'info'] %}
+                        {% set category = 'info' %}
+                    {% endif %}
+                    <div class="custom-toast toast-{{ category }}" role="alert" aria-live="assertive" aria-atomic="true">
+                        <div class="toast-content">
+                            {% if category == 'success' %}
+                                <i class="fas fa-check-circle me-2"></i>
+                            {% elif category == 'danger' %}
+                                <i class="fas fa-exclamation-circle me-2"></i>
+                            {% elif category == 'warning' %}
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                            {% else %}
+                                <i class="fas fa-info-circle me-2"></i>
+                            {% endif %}
+                            {{ message }}
+                        </div>
+                        <button type="button" class="toast-close" aria-label="Close">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+    </div>
 
     <div class="container text-center form-signin w-100 m-auto">
         <div class="card shadow">
             <div class="card-body p-4 p-sm-5">
                 <i class="fas fa-tooth fa-3x mb-3 text-primary"></i>
-                <h1 class="h3 mb-3 fw-normal">Moda Dent</h1>
+                <h1 class="h3 mb-3 fw-normal">DentTrack</h1>
                 <h2 class="h5 mb-4 fw-normal text-muted">Giriş Yapın</h2>
-                
-                <!-- Flash Mesajları -->
-                {% with messages = get_flashed_messages(with_categories=true) %}
-                    {% if messages %}
-                        {% for category, message in messages %}
-                            <div class="login-alert alert alert-{{ category }} alert-dismissible fade show" role="alert">
-                                <div class="d-flex align-items-center">
-                                    {% if category == 'info' %}
-                                        <i class="fas fa-info-circle me-2"></i>
-                                    {% elif category == 'danger' %}
-                                        <i class="fas fa-exclamation-triangle me-2"></i>
-                                    {% else %}
-                                        <i class="fas fa-check-circle me-2"></i>
-                                    {% endif %}
-                                    <span>{{ message }}</span>
-                                </div>
-                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                            </div>
-                        {% endfor %}
-                    {% endif %}
-                {% endwith %}
                 
                 <form method="post" action="{{ url_for('auth.login') }}">
                     {{ form.hidden_tag() }}
@@ -133,84 +214,77 @@
 
     <!-- Bootstrap JS ve Popper.js -->
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.min.js"></script>
     
-    <!-- Auto-dismiss alerts -->
+    <!-- Custom Toast Script -->
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Auto-dismiss login alerts after 5 seconds
-            const loginAlerts = document.querySelectorAll('.login-alert');
-            loginAlerts.forEach(function(alert) {
-                setTimeout(function() {
-                    const bsAlert = new bootstrap.Alert(alert);
-                    bsAlert.close();
-                }, 5000);
+            // Auto-dismiss toasts and add close button functionality
+            const toasts = document.querySelectorAll('.custom-toast');
+            
+            toasts.forEach(toast => {
+                // Auto-dismiss after 3 seconds
+                setTimeout(() => {
+                    fadeOutAndRemove(toast);
+                }, 3000);
+                
+                // Add click handler for close button
+                const closeBtn = toast.querySelector('.toast-close');
+                if (closeBtn) {
+                    closeBtn.addEventListener('click', () => {
+                        fadeOutAndRemove(toast);
+                    });
+                }
             });
+            
+            // Helper function to fade out and remove toast
+            function fadeOutAndRemove(element) {
+                element.style.opacity = '1';
+                
+                // Create and apply transition
+                element.style.transition = 'opacity 0.3s ease-out';
+                element.style.opacity = '0';
+                
+                // Remove element after transition completes
+                setTimeout(() => {
+                    if (element.parentNode) {
+                        element.parentNode.removeChild(element);
+                    }
+                }, 300);
+            }
         });
     </script>
     
     <!-- Theme Toggle Script -->
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const storedTheme = localStorage.getItem('theme') || 'auto';
-            const themeToggleBtn = document.getElementById('theme-toggle');
-            const themeIcon = themeToggleBtn.querySelector('i');
-            
-            // Function to set the theme on the html element
-            const setTheme = (theme) => {
-                if (theme === 'auto') {
-                    // For auto theme, check system preference
-                    if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-                        document.documentElement.setAttribute('data-bs-theme', 'dark');
-                    } else {
-                        document.documentElement.setAttribute('data-bs-theme', 'light');
-                    }
-                } else {
-                    // For explicit light/dark theme
-                    document.documentElement.setAttribute('data-bs-theme', theme);
-                }
-            };
-            
-            const setThemeIcon = (theme) => {
-                themeIcon.className = 'fas ';
-                if (theme === 'light') {
-                    themeIcon.className += 'fa-sun';
-                } else if (theme === 'dark') {
-                    themeIcon.className += 'fa-moon';
-                } else {
-                    themeIcon.className += 'fa-circle-half-stroke';
-                }
-            };
-            
-            // Initialize theme
-            setTheme(storedTheme);
-            setThemeIcon(storedTheme);
-            
-            // Add click handler to cycle through themes
-            themeToggleBtn.addEventListener('click', function() {
-                const currentTheme = localStorage.getItem('theme') || 'auto';
-                let newTheme;
-                
-                if (currentTheme === 'light') {
-                    newTheme = 'dark';
-                } else if (currentTheme === 'dark') {
-                    newTheme = 'auto';
-                } else {
-                    newTheme = 'light';
-                }
-                
-                localStorage.setItem('theme', newTheme);
-                setThemeIcon(newTheme);
-                setTheme(newTheme);
+        function setTheme(mode = 'auto') {
+            const userMode = localStorage.getItem('bs-theme');
+            const sysMode = window.matchMedia('(prefers-color-scheme: light)').matches;
+            const useSystem = mode === 'system' || (!userMode && mode === 'auto');
+            const modeChosen = useSystem ? 'system' : mode === 'dark' || mode === 'light' ? mode : userMode;
+
+            if (useSystem) {
+                localStorage.removeItem('bs-theme');
+            } else {
+                localStorage.setItem('bs-theme', modeChosen);
+            }
+
+            document.documentElement.setAttribute('data-bs-theme', useSystem ? (sysMode ? 'light' : 'dark') : modeChosen);
+            document.querySelectorAll('.mode-switch .btn').forEach(e => {
+                e.classList.remove('active');
+                e.classList.remove('text-body');
             });
             
-            // Listen for system theme changes when in auto mode
-            window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
-                if (localStorage.getItem('theme') === 'auto') {
-                    setTheme('auto');
-                }
-            });
-        });
+            // Update active button
+            const activeBtn = document.getElementById(modeChosen);
+            if (activeBtn) {
+                activeBtn.classList.add('active');
+            }
+        }
+
+        setTheme();
+        document.querySelectorAll('.mode-switch .btn').forEach(e => e.addEventListener('click', () => setTheme(e.id)));
+        window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', () => setTheme());
     </script>
 </body>
 </html> 

@@ -9,7 +9,6 @@ def seed_treatment_types(db):
         for treatment_data in TREATMENT_TYPES:
             treatment_type = TreatmentType(
                 name=treatment_data['name'],
-                description=treatment_data.get('description', ''),
                 base_price=treatment_data['base_price']
             )
             db.session.add(treatment_type)

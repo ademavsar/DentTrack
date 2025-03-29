@@ -7,11 +7,13 @@
     <!-- Favicon -->
     <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}">
     <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Font Awesome -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <!-- Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@latest/dist/chart.umd.min.js"></script>
     <style>
         .navbar-brand {
             font-weight: bold;
@@ -37,7 +39,72 @@
             background-color: var(--bs-body-bg);
             color: var(--bs-body-color);
         }
-        /* Enhanced login-required alert styling */
+        /* Toast notification styling */
+        #toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1090;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .custom-toast {
+            min-width: 260px;
+            max-width: 320px;
+            padding: 10px 15px;
+            border-radius: 6px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            animation: toastSlideIn 0.3s ease-out;
+            backdrop-filter: blur(4px);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .toast-success {
+            background-color: rgba(25, 135, 84, 0.95);
+            color: white;
+        }
+        .toast-danger {
+            background-color: rgba(220, 53, 69, 0.95);
+            color: white;
+        }
+        .toast-info {
+            background-color: rgba(13, 110, 253, 0.95);
+            color: white;
+        }
+        .toast-warning {
+            background-color: rgba(255, 193, 7, 0.95);
+            color: #212529;
+        }
+        .toast-content {
+            display: flex;
+            align-items: center;
+            flex-grow: 1;
+        }
+        .toast-close {
+            background: transparent;
+            border: none;
+            color: inherit;
+            font-size: 1.1rem;
+            margin-left: 10px;
+            cursor: pointer;
+            opacity: 0.8;
+        }
+        .toast-close:hover {
+            opacity: 1;
+        }
+        @keyframes toastSlideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        /* Legacy flash container styling (keeping for reference) */
         .flash-container {
             position: fixed;
             top: 80px;
@@ -67,94 +134,258 @@
                 transform: translateY(0);
             }
         }
+        /* Active nav item styling */
+        .navbar-nav .nav-link.active,
+        .navbar-nav .nav-link:hover {
+            background-color: rgba(255, 255, 255, 0.15);
+        }
+        
+        /* Mobile menu improvements */
+        @media (max-width: 991.98px) {
+            .navbar-nav .nav-link {
+                padding: 0.75rem 1rem;
+                margin-bottom: 0.5rem;
+            }
+            
+            #mainNavigation {
+                padding-top: 1rem;
+            }
+        }
+        
+        /* Give more space to the nav elements */
+        .navbar {
+            padding-top: 0.75rem;
+            padding-bottom: 0.75rem;
+        }
+        
+        /* Add a subtle indicator for the active page */
+        .nav-link.active {
+            position: relative;
+            font-weight: 500;
+        }
+        
+        .nav-link.active:after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background-color: rgba(255, 255, 255, 0.5);
+            border-radius: 3px;
+        }
+        
+        /* Theme toggle button styling */
+        .mode-switch .btn {
+            padding: 0.25rem 0.5rem;
+        }
+        
+        .mode-switch .btn i {
+            opacity: 0.85;
+        }
+        
+        .mode-switch .btn-outline-light-active {
+            background-color: rgba(255, 255, 255, 0.2);
+            border-color: rgba(255, 255, 255, 0.5);
+        }
     </style>
 </head>
 <body>
-    <!-- Navbar -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+    <!-- Redesigned Navbar -->
+    <nav class="navbar navbar-expand-lg sticky-top navbar-dark bg-primary shadow-sm">
         <div class="container">
-            <a class="navbar-brand" href="{{ url_for('patients.index') }}">
-                <i class="fas fa-tooth me-2"></i>Moda Dent
+            <!-- Logo and Brand -->
+            <a class="navbar-brand d-flex align-items-center" href="{{ url_for('patients.index') }}">
+                <i class="fas fa-tooth fs-4 me-2"></i>
+                <span class="fw-bold">DentTrack</span>
             </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            
+            <!-- Mobile Toggle -->
+            <div class="d-flex align-items-center ms-auto me-2 d-lg-none">
+                <!-- Theme Toggle for Mobile -->
+                <div class="mode-switch me-2">
+                    <button title="Use dark mode" id="dark-mobile" class="btn btn-sm btn-outline-light">
+                        <i class="bi bi-moon fs-5"></i>
+                    </button>
+                    <button title="Use light mode" id="light-mobile" class="btn btn-sm btn-outline-light">
+                        <i class="bi bi-sun fs-5"></i>
+                    </button>
+                    <button title="Use system preferred mode" id="system-mobile" class="btn btn-sm btn-outline-light">
+                        <i class="bi bi-display fs-5"></i>
+                    </button>
+                </div>
+                
+                <!-- User Icon for Mobile -->
+                <button class="btn btn-link text-white p-1 d-lg-none" 
+                        type="button"
+                        data-bs-toggle="offcanvas" 
+                        data-bs-target="#userMenuOffcanvas"
+                        aria-controls="userMenuOffcanvas"
+                        aria-label="User menu">
+                    <i class="fas fa-user-circle fs-5"></i>
+                </button>
+            </div>
+            
+            <!-- Hamburger Menu -->
+            <button class="navbar-toggler border-0" 
+                    type="button" 
+                    data-bs-toggle="collapse" 
+                    data-bs-target="#mainNavigation"
+                    aria-controls="mainNavigation" 
+                    aria-expanded="false" 
+                    aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav me-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('patients.list_patients') }}">
-                            <i class="fas fa-users me-2"></i>Hastalar
+            
+            <!-- Main Navigation -->
+            <div class="collapse navbar-collapse" id="mainNavigation">
+                <!-- Main Nav Items -->
+                <ul class="navbar-nav mx-auto">
+                    <li class="nav-item mx-1">
+                        <a class="nav-link px-3 py-2 rounded-pill d-flex align-items-center" href="{{ url_for('patients.list_patients') }}">
+                            <i class="fas fa-users me-2"></i>
+                            <span>Hastalar</span>
                         </a>
                     </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('treatments.list_types') }}">
-                            <i class="fas fa-list-alt me-2"></i>Tedavi Türleri
+                    <li class="nav-item mx-1">
+                        <a class="nav-link px-3 py-2 rounded-pill d-flex align-items-center" href="{{ url_for('patients.unpaid_treatments') }}">
+                            <i class="fas fa-hand-holding-usd me-2"></i>
+                            <span>Ödemeler</span>
                         </a>
                     </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('patients.unpaid_treatments') }}">
-                            <i class="fas fa-hand-holding-usd me-1"></i>Bekleyen Ödemeler
+                    <li class="nav-item mx-1">
+                        <a class="nav-link px-3 py-2 rounded-pill d-flex align-items-center" href="{{ url_for('treatments.list_types') }}">
+                            <i class="fas fa-list-alt me-2"></i>
+                            <span>Tedavi Türleri</span>
                         </a>
                     </li>
                 </ul>
-                <!-- User Menu -->
-                <div class="dropdown ms-3">
-                    <button class="btn btn-link nav-link py-2 px-0 px-lg-2 dropdown-toggle d-flex align-items-center" 
-                            type="button"
-                            id="userMenu"
-                            data-bs-toggle="dropdown"
-                            aria-expanded="false">
-                        <i class="fas fa-user-circle me-1"></i>
-                        <span class="d-none d-lg-inline">{{ current_user.username }}</span>
-                    </button>
-                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userMenu">
-                        {% if current_user.is_admin() %}
-                        <li>
-                            <a class="dropdown-item d-flex align-items-center" href="{{ url_for('admin.users_list') }}">
-                                <i class="fas fa-users-cog me-2"></i>Kullanıcı Yönetimi
-                            </a>
-                        </li>
-                        <li><hr class="dropdown-divider"></li>
-                        {% endif %}
-                        <li>
-                            <a class="dropdown-item d-flex align-items-center" href="{{ url_for('auth.logout') }}">
-                                <i class="fas fa-sign-out-alt me-2"></i>Çıkış Yap
-                            </a>
-                        </li>
-                    </ul>
+                
+                <!-- Desktop User Menu -->
+                <div class="d-none d-lg-flex align-items-center">
+                    <!-- Theme Toggle -->
+                    <div class="mode-switch me-2">
+                        <button title="Use dark mode" id="dark" class="btn btn-sm btn-outline-light">
+                            <i class="bi bi-moon fs-5"></i>
+                        </button>
+                        <button title="Use light mode" id="light" class="btn btn-sm btn-outline-light">
+                            <i class="bi bi-sun fs-5"></i>
+                        </button>
+                        <button title="Use system preferred mode" id="system" class="btn btn-sm btn-outline-light">
+                            <i class="bi bi-display fs-5"></i>
+                        </button>
+                    </div>
+                    
+                    <!-- User Dropdown -->
+                    <div class="dropdown">
+                        <button class="btn btn-outline-light border-0 d-flex align-items-center" 
+                                type="button"
+                                id="userMenuDropdown"
+                                data-bs-toggle="dropdown"
+                                aria-expanded="false">
+                            <i class="fas fa-user-circle me-2"></i>
+                            <span>{{ current_user.username }}</span>
+                            <i class="fas fa-chevron-down ms-2 small"></i>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="userMenuDropdown">
+                            {% if current_user.is_admin() %}
+                            <li>
+                                <a class="dropdown-item d-flex align-items-center" href="{{ url_for('admin.users_list') }}">
+                                    <i class="fas fa-users-cog me-2 text-primary"></i>
+                                    <span>Kullanıcı Yönetimi</span>
+                                </a>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            {% endif %}
+                            <li>
+                                <a class="dropdown-item d-flex align-items-center" href="{{ url_for('auth.logout') }}">
+                                    <i class="fas fa-sign-out-alt me-2 text-danger"></i>
+                                    <span>Çıkış Yap</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
                 </div>
-                <!-- Theme Toggle Button -->
-                <button class="btn btn-link nav-link py-2 px-0 px-lg-2 d-flex align-items-center" 
-                        id="theme-toggle" 
-                        type="button" 
-                        data-bs-toggle="tooltip" 
-                        data-bs-placement="bottom" 
-                        title="Tema Değiştir">
-                    <i class="fas fa-sun theme-icon-active me-1"></i>
-                </button>
             </div>
         </div>
     </nav>
+    
+    <!-- Mobile User Menu Offcanvas -->
+    <div class="offcanvas offcanvas-end" tabindex="-1" id="userMenuOffcanvas" aria-labelledby="userMenuOffcanvasLabel">
+        <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="userMenuOffcanvasLabel">
+                <i class="fas fa-user-circle me-2"></i>
+                {{ current_user.username }}
+            </h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+        </div>
+        <div class="offcanvas-body">
+            <div class="d-grid gap-2">
+                {% if current_user.is_admin() %}
+                <a class="btn btn-outline-primary d-flex align-items-center justify-content-start" href="{{ url_for('admin.users_list') }}">
+                    <i class="fas fa-users-cog me-2"></i>
+                    <span>Kullanıcı Yönetimi</span>
+                </a>
+                <hr>
+                {% endif %}
+                <a class="btn btn-outline-danger d-flex align-items-center justify-content-start" href="{{ url_for('auth.logout') }}">
+                    <i class="fas fa-sign-out-alt me-2"></i>
+                    <span>Çıkış Yap</span>
+                </a>
+            </div>
+        </div>
+    </div>
 
-    <!-- Flash Mesajları -->
-    <div class="container flash-container mt-3">
+    <!-- JavaScript to handle active nav links and duplicate theme toggle -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Set active nav link based on current URL
+            const currentPath = window.location.pathname;
+            document.querySelectorAll('.navbar-nav .nav-link').forEach(link => {
+                if (link.getAttribute('href') === currentPath) {
+                    link.classList.add('active');
+                }
+            });
+            
+            // Make mobile theme toggle work the same as desktop
+            document.querySelectorAll('.mode-switch .btn').forEach(btn => {
+                if (btn.id.includes('mobile')) {
+                    btn.addEventListener('click', function() {
+                        const desktopBtnId = btn.id.replace('-mobile', '');
+                        document.getElementById(desktopBtnId).click();
+                    });
+                }
+            });
+        });
+    </script>
+
+    <!-- Toast Notifications Container -->
+    <div id="toast-container">
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
-                    {% if 'Lütfen bu sayfaya erişmek için giriş yapın' in message %}
-                        <div class="login-required-alert alert alert-{{ category }} alert-dismissible fade show shadow-sm border" role="alert">
-                            <div class="d-flex align-items-center">
-                                <i class="fas fa-lock me-2 fs-5"></i>
-                                <strong>{{ message }}</strong>
-                            </div>
-                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                        </div>
-                    {% else %}
-                        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-                            {{ message }}
-                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                        </div>
+                    {% if category == 'error' %}
+                        {% set category = 'danger' %}
+                    {% elif category not in ['success', 'danger', 'warning', 'info'] %}
+                        {% set category = 'info' %}
                     {% endif %}
+                    <div class="custom-toast toast-{{ category }}" role="alert" aria-live="assertive" aria-atomic="true">
+                        <div class="toast-content">
+                            {% if category == 'success' %}
+                                <i class="fas fa-check-circle me-2"></i>
+                            {% elif category == 'danger' %}
+                                <i class="fas fa-exclamation-circle me-2"></i>
+                            {% elif category == 'warning' %}
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                            {% else %}
+                                <i class="fas fa-info-circle me-2"></i>
+                            {% endif %}
+                            {{ message }}
+                        </div>
+                        <button type="button" class="toast-close" aria-label="Close">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
                 {% endfor %}
             {% endif %}
         {% endwith %}
@@ -228,88 +459,137 @@
     <!-- Custom JavaScript -->
     {% block scripts %}{% endblock %}
     
-    <!-- Login Alert Auto-Dismiss Script -->
+    <!-- Custom Toast Script -->
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Auto-dismiss login required alerts after 5 seconds
-            const loginAlerts = document.querySelectorAll('.login-required-alert');
-            loginAlerts.forEach(function(alert) {
-                setTimeout(function() {
-                    const bsAlert = new bootstrap.Alert(alert);
-                    bsAlert.close();
-                }, 5000);
+            // Auto-dismiss toasts and add close button functionality
+            const toasts = document.querySelectorAll('.custom-toast');
+            
+            toasts.forEach(toast => {
+                // Auto-dismiss after 3 seconds
+                setTimeout(() => {
+                    fadeOutAndRemove(toast);
+                }, 3000);
+                
+                // Add click handler for close button
+                const closeBtn = toast.querySelector('.toast-close');
+                if (closeBtn) {
+                    closeBtn.addEventListener('click', () => {
+                        fadeOutAndRemove(toast);
+                    });
+                }
             });
+            
+            // Helper function to fade out and remove toast
+            function fadeOutAndRemove(element) {
+                element.style.opacity = '1';
+                
+                // Create and apply transition
+                element.style.transition = 'opacity 0.3s ease-out';
+                element.style.opacity = '0';
+                
+                // Remove element after transition completes
+                setTimeout(() => {
+                    if (element.parentNode) {
+                        element.parentNode.removeChild(element);
+                    }
+                }, 300);
+            }
+        });
+    </script>
+    
+    <!-- Phone Input Masking -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Phone input masking for all inputs with phone-mask class
+            const phoneInputs = document.querySelectorAll('.phone-mask');
+            
+            if (phoneInputs.length > 0) {
+                phoneInputs.forEach(input => {
+                    input.addEventListener('input', function(e) {
+                        let value = e.target.value.replace(/\D/g, ''); // Remove non-digits
+                        
+                        // Limit to 10 digits (5XX-XXX-XX-XX)
+                        if (value.length > 10) {
+                            value = value.slice(0, 10);
+                        }
+                        
+                        // Apply mask based on input length
+                        let formattedValue = '';
+                        if (value.length > 0) {
+                            formattedValue += value.slice(0, 3);
+                        }
+                        if (value.length > 3) {
+                            formattedValue += '-' + value.slice(3, 6);
+                        }
+                        if (value.length > 6) {
+                            formattedValue += '-' + value.slice(6, 8);
+                        }
+                        if (value.length > 8) {
+                            formattedValue += '-' + value.slice(8, 10);
+                        }
+                        
+                        e.target.value = formattedValue;
+                    });
+                    
+                    // Validate on form submission
+                    const form = input.closest('form');
+                    if (form) {
+                        form.addEventListener('submit', function(e) {
+                            const phoneValue = input.value.replace(/-/g, '');
+                            if (phoneValue.length !== 10 || !phoneValue.startsWith('5')) {
+                                input.setCustomValidity('Lütfen geçerli bir telefon numarası girin (5XX-XXX-XX-XX)');
+                            } else {
+                                input.setCustomValidity('');
+                            }
+                        });
+                    }
+                });
+            }
         });
     </script>
     
     <!-- Theme Toggle Script -->
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const storedTheme = localStorage.getItem('theme') || 'auto';
-            const themeToggleBtn = document.getElementById('theme-toggle');
-            const themeIcon = themeToggleBtn.querySelector('i');
-            let tooltip = new bootstrap.Tooltip(themeToggleBtn);
-            
-            // Function to set the theme on the html element
-            const setTheme = (theme) => {
-                if (theme === 'auto') {
-                    // For auto theme, check system preference
-                    if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-                        document.documentElement.setAttribute('data-bs-theme', 'dark');
-                    } else {
-                        document.documentElement.setAttribute('data-bs-theme', 'light');
-                    }
-                } else {
-                    // For explicit light/dark theme
-                    document.documentElement.setAttribute('data-bs-theme', theme);
-                }
-            };
-            
-            const setThemeIcon = (theme) => {
-                themeIcon.className = 'fas ';
-                if (theme === 'light') {
-                    themeIcon.className += 'fa-sun me-1';
-                    themeToggleBtn.setAttribute('title', 'Açık Tema');
-                } else if (theme === 'dark') {
-                    themeIcon.className += 'fa-moon me-1';
-                    themeToggleBtn.setAttribute('title', 'Koyu Tema');
-                } else {
-                    themeIcon.className += 'fa-circle-half-stroke me-1';
-                    themeToggleBtn.setAttribute('title', 'Otomatik Tema');
-                }
-                tooltip.dispose();
-                tooltip = new bootstrap.Tooltip(themeToggleBtn);
-            };
-            
-            // Initialize theme
-            setTheme(storedTheme);
-            setThemeIcon(storedTheme);
-            
-            // Add click handler to cycle through themes
-            themeToggleBtn.addEventListener('click', function() {
-                const currentTheme = localStorage.getItem('theme') || 'auto';
-                let newTheme;
-                
-                if (currentTheme === 'light') {
-                    newTheme = 'dark';
-                } else if (currentTheme === 'dark') {
-                    newTheme = 'auto';
-                } else {
-                    newTheme = 'light';
-                }
-                
-                localStorage.setItem('theme', newTheme);
-                setThemeIcon(newTheme);
-                setTheme(newTheme);
+        function setTheme(mode = 'auto') {
+            const userMode = localStorage.getItem('bs-theme');
+            const sysMode = window.matchMedia('(prefers-color-scheme: light)').matches;
+            const useSystem = mode === 'system' || (!userMode && mode === 'auto');
+            const modeChosen = useSystem ? 'system' : mode === 'dark' || mode === 'light' ? mode : userMode;
+
+            if (useSystem) {
+                localStorage.removeItem('bs-theme');
+            } else {
+                localStorage.setItem('bs-theme', modeChosen);
+            }
+
+            document.documentElement.setAttribute('data-bs-theme', useSystem ? (sysMode ? 'light' : 'dark') : modeChosen);
+            document.querySelectorAll('.mode-switch .btn').forEach(e => {
+                e.classList.remove('btn-outline-light-active');
+                e.classList.remove('text-body');
+                e.classList.remove('text-white');
             });
             
-            // Listen for system theme changes when in auto mode
-            window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
-                if (localStorage.getItem('theme') === 'auto') {
-                    setTheme('auto');
-                }
-            });
+            // Update the active button with a distinct style
+            const activeBtn = document.getElementById(modeChosen);
+            if (activeBtn) {
+                activeBtn.classList.add('btn-outline-light-active');
+            }
+            
+            // Handle mobile buttons too
+            const activeMobileBtn = document.getElementById(modeChosen + '-mobile');
+            if (activeMobileBtn) {
+                activeMobileBtn.classList.add('btn-outline-light-active');
+            }
+        }
+
+        setTheme();
+        document.querySelectorAll('.mode-switch .btn').forEach(e => {
+            if (!e.id.includes('mobile')) {
+                e.addEventListener('click', () => setTheme(e.id));
+            }
         });
+        window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', () => setTheme());
     </script>
     
     <!-- Finansal Özet Grafiği -->

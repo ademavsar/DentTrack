@@ -47,63 +47,8 @@
                 </div>
                 
                 <div class="col-md-6">
-                    <label for="status" class="form-label">Ödeme Durumu</label>
-                    <select class="form-select" id="status" name="status">
-                        <option value="unpaid" selected>Ödenmedi</option>
-                        <option value="paid">Ödendi</option>
-                    </select>
-                </div>
-                
-                <div class="col-12">
                     <label for="notes" class="form-label">Notlar</label>
                     <textarea class="form-control" id="notes" name="notes" rows="3" placeholder="Tedavi hakkında notlar..."></textarea>
-                </div>
-                
-                <!-- Ödeme Bilgileri (Ödendi seçilirse görünecek) -->
-                <div id="paymentDetails" class="col-12 d-none border-top pt-3 mt-3">
-                    <div class="mb-3">
-                        <h5>Ödeme Bilgileri</h5>
-                    </div>
-                    
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <label for="payment_method" class="form-label">Ödeme Yöntemi <span class="text-danger">*</span></label>
-                            <select class="form-select" id="payment_method" name="payment_method">
-                                <option value="cash" selected>Nakit</option>
-                                <option value="credit_card">Kredi Kartı</option>
-                                <option value="mixed">Karma</option>
-                            </select>
-                        </div>
-                        
-                        <div class="col-md-6">
-                            <label for="payment_amount" class="form-label">Ödeme Tutarı (₺) <span class="text-danger">*</span></label>
-                            <input type="number" step="0.01" class="form-control" id="payment_amount" name="payment_amount" 
-                                   placeholder="0.00">
-                        </div>
-                        
-                        <!-- Karma ödeme seçilince görünecek -->
-                        <div id="mixedPaymentDetails" class="col-12 d-none">
-                            <div class="row g-3">
-                                <div class="col-md-6">
-                                    <label for="cash_amount" class="form-label">Nakit Tutarı (₺)</label>
-                                    <input type="number" step="0.01" class="form-control" id="cash_amount" name="cash_amount" 
-                                           placeholder="0.00">
-                                </div>
-                                
-                                <div class="col-md-6">
-                                    <label for="card_amount" class="form-label">Kredi Kartı Tutarı (₺)</label>
-                                    <input type="number" step="0.01" class="form-control" id="card_amount" name="card_amount" 
-                                           placeholder="0.00">
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="col-12">
-                            <label for="payment_notes" class="form-label">Ödeme Notu</label>
-                            <textarea class="form-control" id="payment_notes" name="payment_notes" rows="2" 
-                                      placeholder="Ödeme ile ilgili notlar..."></textarea>
-                        </div>
-                    </div>
                 </div>
                 
                 <div class="col-12 mt-4">
@@ -124,61 +69,14 @@ document.addEventListener('DOMContentLoaded', function() {
     // Form elemanlarını seç
     const treatmentTypeSelect = document.getElementById('treatment_type');
     const priceInput = document.getElementById('price');
-    const statusSelect = document.getElementById('status');
-    const paymentDetails = document.getElementById('paymentDetails');
-    const paymentMethodSelect = document.getElementById('payment_method');
-    const paymentAmountInput = document.getElementById('payment_amount');
-    const mixedPaymentDetails = document.getElementById('mixedPaymentDetails');
-    const cashAmountInput = document.getElementById('cash_amount');
-    const cardAmountInput = document.getElementById('card_amount');
     
     // Tedavi türü değiştiğinde fiyatı güncelle
     treatmentTypeSelect.addEventListener('change', function() {
         const selectedOption = this.options[this.selectedIndex];
         if (selectedOption && selectedOption.dataset.price) {
             priceInput.value = parseFloat(selectedOption.dataset.price).toFixed(2);
-            if (paymentAmountInput) {
-                paymentAmountInput.value = priceInput.value;
-            }
         }
     });
-    
-    // Ödeme durumu değiştiğinde ödeme detay alanını göster/gizle
-    statusSelect.addEventListener('change', function() {
-        if (this.value === 'paid') {
-            paymentDetails.classList.remove('d-none');
-            paymentAmountInput.value = priceInput.value || '0.00';
-            paymentAmountInput.required = true;
-        } else {
-            paymentDetails.classList.add('d-none');
-            paymentAmountInput.required = false;
-        }
-    });
-    
-    // Ödeme yöntemi değiştiğinde karma ödeme alanını göster/gizle
-    paymentMethodSelect.addEventListener('change', function() {
-        if (this.value === 'mixed') {
-            mixedPaymentDetails.classList.remove('d-none');
-            cashAmountInput.required = true;
-            cardAmountInput.required = true;
-        } else {
-            mixedPaymentDetails.classList.add('d-none');
-            cashAmountInput.required = false;
-            cardAmountInput.required = false;
-        }
-    });
-    
-    // Karma ödeme miktarlarını güncelle
-    const updateMixedPaymentTotals = function() {
-        if (paymentMethodSelect.value === 'mixed') {
-            const cashAmount = parseFloat(cashAmountInput.value) || 0;
-            const cardAmount = parseFloat(cardAmountInput.value) || 0;
-            paymentAmountInput.value = (cashAmount + cardAmount).toFixed(2);
-        }
-    };
-    
-    cashAmountInput.addEventListener('change', updateMixedPaymentTotals);
-    cardAmountInput.addEventListener('change', updateMixedPaymentTotals);
 });
 </script>
 {% endblock %} 

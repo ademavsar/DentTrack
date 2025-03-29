@@ -19,4 +19,4 @@ if __name__ == '__main__':
                 from app.core.seed import seed_data
                 seed_data(db)
                 
-    app.run(debug=app.config.get('DEBUG', False)) 
+    app.run(host='0.0.0.0', debug=True if os.environ.get('FLASK_ENV', 'development') == 'development' else app.config.get('DEBUG', False)) 

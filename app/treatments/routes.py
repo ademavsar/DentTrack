@@ -15,13 +15,11 @@ def list_types():
 @login_required
 def add_type():
     name = request.form.get('name')
-    description = request.form.get('description', '')
     base_price = float(request.form.get('base_price', 0))
     
     try:
         treatment_type = TreatmentType(
             name=name, 
-            description=description,
             base_price=base_price
         )
         db.session.add(treatment_type)
@@ -38,7 +36,6 @@ def add_type():
 def edit_type(type_id):
     treatment_type = TreatmentType.query.get_or_404(type_id)
     treatment_type.name = request.form.get('name')
-    treatment_type.description = request.form.get('description', '')
     treatment_type.base_price = float(request.form.get('base_price', 0))
     
     try:

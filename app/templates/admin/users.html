@@ -3,96 +3,270 @@
 {% block title %}{{ title }}{% endblock %}
 
 {% block content %}
-<div class="container-fluid py-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="h4 mb-0">Kullanıcı Yönetimi</h2>
-        <a href="{{ url_for('admin.add_user') }}" class="btn btn-primary">
-            <i class="fas fa-plus me-2"></i>Yeni Kullanıcı Ekle
-        </a>
+<div class="container mt-4">
+    <!-- Header Section -->
+    <div class="row mb-4 align-items-center">
+        <div class="col">
+            <h2 class="mb-0">Kullanıcı Yönetimi</h2>
+            <p class="text-muted small mt-1">Sistem kullanıcılarını yönetin</p>
+        </div>
+        <div class="col-auto">
+            <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#addUserModal">
+                <i class="fas fa-plus me-1"></i> Yeni Kullanıcı
+            </button>
+        </div>
     </div>
     
-    <div class="card border-0 shadow-sm">
-        <div class="card-body">
+    <!-- Main Content -->
+    <div class="card border-0">
+        <div class="card-body p-0">
             {% if users %}
-            <div class="table-responsive">
-                <table class="table table-hover align-middle">
-                    <thead>
-                        <tr>
-                            <th>Kullanıcı Adı</th>
-                            <th>E-posta</th>
-                            <th>Rol</th>
-                            <th>Durum</th>
-                            <th>Oluşturulma Tarihi</th>
-                            <th class="text-end">İşlemler</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for user in users %}
-                        <tr>
-                            <td>
-                                <span class="fw-medium">{{ user.username }}</span>
-                            </td>
-                            <td>{{ user.email }}</td>
-                            <td>
-                                {% if user.role == 'admin' %}
-                                <span class="badge bg-primary">Yönetici</span>
-                                {% else %}
-                                <span class="badge bg-secondary">Kullanıcı</span>
-                                {% endif %}
-                            </td>
-                            <td>
-                                {% if user.is_active %}
-                                <span class="badge bg-success">Aktif</span>
-                                {% else %}
-                                <span class="badge bg-danger">Pasif</span>
-                                {% endif %}
-                            </td>
-                            <td>{{ user.created_at.strftime('%d.%m.%Y') }}</td>
-                            <td class="text-end">
-                                <div class="btn-group">
-                                    <a href="{{ url_for('auth.edit_user', user_id=user.id) }}" class="btn btn-sm btn-outline-secondary">
+                <!-- Desktop Table View -->
+                <div class="table-responsive d-none d-md-block">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Kullanıcı Adı</th>
+                                <th>E-posta</th>
+                                <th>Rol</th>
+                                <th>Durum</th>
+                                <th>Kayıt Tarihi</th>
+                                <th class="text-end">İşlemler</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for user in users %}
+                            <tr>
+                                <td class="fw-medium">{{ user.username }}</td>
+                                <td>{{ user.email }}</td>
+                                <td>
+                                    {% if user.role == 'admin' %}
+                                    <span class="badge bg-dark text-primary">Yönetici</span>
+                                    {% else %}
+                                    <span class="badge bg-dark text-secondary">Standart</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if user.is_active %}
+                                    <span class="badge bg-dark text-success">Aktif</span>
+                                    {% else %}
+                                    <span class="badge bg-dark text-danger">Pasif</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ user.created_at.strftime('%d.%m.%Y') }}</td>
+                                <td class="text-end">
+                                    <button type="button" 
+                                            class="btn btn-sm btn-outline-secondary"
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#editUserModal{{ user.id }}">
                                         <i class="fas fa-edit"></i>
-                                    </a>
-                                    <button type="button" class="btn btn-sm btn-outline-danger"
-                                        data-bs-toggle="modal" 
-                                        data-bs-target="#deleteUserModal{{ user.id }}">
+                                    </button>
+                                    <button type="button" 
+                                            class="btn btn-sm btn-outline-danger" 
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#deleteUserModal{{ user.id }}"
+                                            {% if user.id == current_user.id %}disabled{% endif %}>
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Mobile Card View -->
+                <div class="d-md-none px-3 py-2">
+                    <div class="list-group list-group-flush">
+                        {% for user in users %}
+                        <div class="list-group-item px-0 py-3">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h6 class="mb-0 fw-medium">{{ user.username }}</h6>
+                                <div>
+                                    <button type="button" 
+                                           class="btn btn-sm btn-outline-secondary me-1"
+                                           data-bs-toggle="modal" 
+                                           data-bs-target="#editUserModal{{ user.id }}">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button type="button" 
+                                            class="btn btn-sm btn-outline-danger" 
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#deleteUserModal{{ user.id }}"
+                                            {% if user.id == current_user.id %}disabled{% endif %}>
                                         <i class="fas fa-trash"></i>
                                     </button>
                                 </div>
-                                
-                                <!-- Delete User Modal -->
-                                <div class="modal fade" id="deleteUserModal{{ user.id }}" tabindex="-1" aria-labelledby="deleteUserModalLabel{{ user.id }}" aria-hidden="true">
-                                    <div class="modal-dialog">
-                                        <div class="modal-content">
-                                            <div class="modal-header">
-                                                <h5 class="modal-title" id="deleteUserModalLabel{{ user.id }}">Kullanıcı Silme Onayı</h5>
-                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                            </div>
-                                            <div class="modal-body text-start">
-                                                <p><strong>{{ user.username }}</strong> kullanıcısını silmek istediğinizden emin misiniz?</p>
-                                                <p class="text-danger">Bu işlem geri alınamaz!</p>
-                                            </div>
-                                            <div class="modal-footer">
-                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
-                                                <form action="{{ url_for('auth.delete_user', user_id=user.id) }}" method="post">
-                                                    <button type="submit" class="btn btn-danger">Kullanıcıyı Sil</button>
-                                                </form>
-                                            </div>
-                                        </div>
+                            </div>
+                            
+                            <div class="small mb-1">{{ user.email }}</div>
+                            
+                            <div class="d-flex justify-content-between align-items-center small text-muted">
+                                <div>
+                                    {% if user.role == 'admin' %}
+                                    <span class="badge bg-dark text-primary me-2">Yönetici</span>
+                                    {% else %}
+                                    <span class="badge bg-dark text-secondary me-2">Standart</span>
+                                    {% endif %}
+                                    
+                                    {% if user.is_active %}
+                                    <span class="badge bg-dark text-success">Aktif</span>
+                                    {% else %}
+                                    <span class="badge bg-dark text-danger">Pasif</span>
+                                    {% endif %}
+                                </div>
+                                <span>{{ user.created_at.strftime('%d.%m.%Y') }}</span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                
+                <!-- User Modals -->
+                {% for user in users %}
+                <!-- Edit User Modal -->
+                <div class="modal fade" id="editUserModal{{ user.id }}" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">Kullanıcı Düzenleme</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <form action="{{ url_for('auth.edit_user', user_id=user.id) }}" method="post">
+                                <div class="modal-body">
+                                    <div class="mb-3">
+                                        <label for="username{{ user.id }}" class="form-label">Kullanıcı Adı <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-control" id="username{{ user.id }}" name="username" 
+                                               value="{{ user.username }}" required>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label for="email{{ user.id }}" class="form-label">E-posta <span class="text-danger">*</span></label>
+                                        <input type="email" class="form-control" id="email{{ user.id }}" name="email" 
+                                               value="{{ user.email }}" required>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label for="password{{ user.id }}" class="form-label">Şifre</label>
+                                        <input type="password" class="form-control" id="password{{ user.id }}" name="password">
+                                        <div class="form-text">Şifreyi değiştirmek istemiyorsanız boş bırakın.</div>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label for="role{{ user.id }}" class="form-label">Rol <span class="text-danger">*</span></label>
+                                        <select class="form-select" id="role{{ user.id }}" name="role" required>
+                                            <option value="user" {% if user.role == 'user' %}selected{% endif %}>Standart Kullanıcı</option>
+                                            <option value="admin" {% if user.role == 'admin' %}selected{% endif %}>Yönetici</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div class="form-check form-switch mb-3">
+                                        <input class="form-check-input" type="checkbox" role="switch" 
+                                               id="is_active{{ user.id }}" name="is_active" value="1"
+                                               {% if user.is_active %}checked{% endif %}>
+                                        <label class="form-check-label" for="is_active{{ user.id }}">Kullanıcı aktif</label>
                                     </div>
                                 </div>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-dark" data-bs-dismiss="modal">İptal</button>
+                                    <button type="submit" class="btn btn-outline-primary">Kaydet</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Delete User Modal -->
+                <div class="modal fade" id="deleteUserModal{{ user.id }}" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">Kullanıcı Silme</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                <p class="mb-1"><strong>{{ user.username }}</strong> kullanıcısını silmek istediğinizden emin misiniz?</p>
+                                <p class="text-danger small">Bu işlem geri alınamaz!</p>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-dark" data-bs-dismiss="modal">İptal</button>
+                                <form action="{{ url_for('auth.delete_user', user_id=user.id) }}" method="post">
+                                    <button type="submit" class="btn btn-outline-danger">Sil</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
             {% else %}
-            <div class="alert alert-info">
-                Henüz hiç kullanıcı eklenmemiş.
-            </div>
+                <div class="text-center py-4">
+                    <p class="text-muted mb-3">Henüz hiç kullanıcı eklenmemiş</p>
+                    <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#addUserModal">
+                        <i class="fas fa-plus me-1"></i> Kullanıcı Ekle
+                    </button>
+                </div>
             {% endif %}
         </div>
     </div>
 </div>
+
+<!-- Add User Modal -->
+<div class="modal fade" id="addUserModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Yeni Kullanıcı Ekle</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{{ url_for('admin.add_user') }}" method="post">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="username" class="form-label">Kullanıcı Adı <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="username" name="username" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="email" class="form-label">E-posta <span class="text-danger">*</span></label>
+                        <input type="email" class="form-control" id="email" name="email" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="password" class="form-label">Şifre <span class="text-danger">*</span></label>
+                        <input type="password" class="form-control" id="password" name="password" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="role" class="form-label">Rol <span class="text-danger">*</span></label>
+                        <select class="form-select" id="role" name="role" required>
+                            <option value="user" selected>Standart Kullanıcı</option>
+                            <option value="admin">Yönetici</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-check form-switch mb-3">
+                        <input class="form-check-input" type="checkbox" role="switch" 
+                               id="is_active" name="is_active" value="1" checked>
+                        <label class="form-check-label" for="is_active">Kullanıcı aktif</label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-dark" data-bs-dismiss="modal">İptal</button>
+                    <button type="submit" class="btn btn-outline-primary">Kullanıcı Ekle</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize tooltips
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl)
+        })
+    });
+</script>
 {% endblock %} 
