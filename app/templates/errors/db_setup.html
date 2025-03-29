@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block title %}Database Setup Required{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card border-danger">
+                <div class="card-header bg-danger text-white">
+                    <h4 class="mb-0">Veritabanı Hazırlığı Gerekiyor</h4>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Uygulama veritabanı eksik tablolar içeriyor ve çalışamıyor.
+                    </div>
+
+                    <h5 class="mt-4">Eksik Tablolar:</h5>
+                    <ul class="list-group mb-4">
+                        {% for table in missing_tables %}
+                        <li class="list-group-item list-group-item-danger">
+                            <i class="fas fa-times-circle me-2"></i> {{ table }}
+                        </li>
+                        {% endfor %}
+                    </ul>
+
+                    <div class="alert alert-info">
+                        <h5><i class="fas fa-info-circle me-2"></i> Çözüm</h5>
+                        <p>Bu sorunu çözmek için şu adımları takip edin:</p>
+                        <ol>
+                            <li>Tüm veritabanı göçlerini yürütün: <code>flask db upgrade</code></li>
+                            <li>Veritabanı içeriğini doğrulayın: <code>python db_check.py</code></li>
+                            <li>Uygulamayı yeniden başlatın</li>
+                        </ol>
+                    </div>
+
+                    <div class="alert alert-secondary">
+                        <h5><i class="fas fa-file-alt me-2"></i> Alternatif Seçenekler</h5>
+                        <p>Göçler sorun çıkarıyorsa, veritabanı kurulum betiğini kullanabilirsiniz:</p>
+                        <pre><code>python setup_db.py</code></pre>
+                        <p>Bu komut tüm gerekli tabloları otomatik olarak oluşturacaktır.</p>
+                        <p>Veritabanını varsayılan verilerle doldurmak için:</p>
+                        <pre><code>python setup_db.py --seed</code></pre>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <div class="d-flex justify-content-between">
+                        <a href="/health" class="btn btn-outline-primary">
+                            <i class="fas fa-sync-alt me-1"></i> Durumu Kontrol Et
+                        </a>
+                        <a href="/" class="btn btn-outline-secondary">
+                            <i class="fas fa-home me-1"></i> Ana Sayfaya Dön
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

@@ -49,4 +49,8 @@ Thumbs.db
 DEV_TASKS.md
 MIGRATION_RULES.md
 
+# Logs
+logs/
+*.log
 logs/*.log
+logs/**/*.log

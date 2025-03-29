@@ -6,6 +6,8 @@ import os
 import logging
 from logging.handlers import RotatingFileHandler
 from dotenv import load_dotenv
+from sqlalchemy import inspect
+import sys
 
 # Load environment variables from .env file
 load_dotenv()
@@ -14,6 +16,25 @@ load_dotenv()
 db = SQLAlchemy()
 migrate = Migrate()
 login_manager = LoginManager()
+
+def verify_required_tables(app, inspector):
+    """
+    Verify that all required database tables exist.
+    Returns (success, missing_tables) tuple.
+    """
+    required_tables = ['user', 'patient', 'treatment', 'treatment_type', 'payment']
+    existing_tables = inspector.get_table_names()
+    
+    app.logger.info(f"Required tables: {', '.join(required_tables)}")
+    app.logger.info(f"Existing tables: {', '.join(existing_tables)}")
+    
+    missing_tables = [table for table in required_tables if table not in existing_tables]
+    
+    if missing_tables:
+        app.logger.error(f"Missing required tables: {', '.join(missing_tables)}")
+        return False, missing_tables
+    
+    return True, []
 
 def create_app(config=None):
     """Application factory function that creates and configures the Flask app"""
@@ -110,6 +131,38 @@ def create_app(config=None):
         flash('Lütfen bu sayfaya erişmek için giriş yapın.', 'info')
         return redirect(url_for('auth.login'))
     
+    # Verify database in production mode
+    with app.app_context():
+        env = os.environ.get('FLASK_ENV', 'development')
+        auto_create_db = app.config.get('AUTO_CREATE_DB', True)
+        
+        if env == 'production' and not auto_create_db:
+            try:
+                # Check if database exists and has required tables
+                inspector = inspect(db.engine)
+                tables_ok, missing_tables = verify_required_tables(app, inspector)
+                
+                if not tables_ok:
+                    app.logger.error(f"FATAL: Database is missing required tables: {', '.join(missing_tables)}")
+                    app.logger.error("Please run 'flask db upgrade' to set up the database before starting the application.")
+                    
+                    # Register a special error handler for database issues
+                    @app.route('/', defaults={'path': ''})
+                    @app.route('/<path:path>')
+                    def database_setup_required(path):
+                        return render_template('errors/db_setup.html', missing_tables=missing_tables), 503
+                    
+                    # Don't register other routes if database is not ready
+                    app.logger.warning("Application started in maintenance mode due to database issues")
+            except Exception as e:
+                app.logger.error(f"Error checking database: {str(e)}")
+                
+                # Register a catch-all error handler
+                @app.route('/', defaults={'path': ''})
+                @app.route('/<path:path>')
+                def database_connection_error(path):
+                    return render_template('errors/db_error.html', error=str(e)), 503
+    
     # Register error handlers
     @app.errorhandler(404)
     def not_found_error(error):
@@ -136,16 +189,27 @@ def create_app(config=None):
     def health_check():
         """Simple endpoint to check if the application is running"""
         try:
-            # Simple database check
-            db.session.execute('SELECT 1').scalar()
-            db_status = "ok"
+            # Check if required tables exist
+            inspector = inspect(db.engine)
+            tables_ok, missing_tables = verify_required_tables(app, inspector)
+            
+            if not tables_ok:
+                db_status = "incomplete"
+                details = f"Missing tables: {', '.join(missing_tables)}"
+            else:
+                # Simple database query check
+                db.session.execute('SELECT 1').scalar()
+                db_status = "ok"
+                details = "All required tables present"
         except Exception as e:
             app.logger.error(f"Database health check failed: {e}")
             db_status = "error"
+            details = str(e)
         
         status = {
             "status": "ok" if db_status == "ok" else "error",
             "db_connection": db_status,
+            "db_details": details,
             "app": "DentTrack",
             "environment": os.environ.get("FLASK_ENV", "development")
         }

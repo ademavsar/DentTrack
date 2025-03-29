@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block title %}Database Connection Error{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card border-danger">
+                <div class="card-header bg-danger text-white">
+                    <h4 class="mb-0">Veritabanı Bağlantı Hatası</h4>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-danger">
+                        <i class="fas fa-database me-2"></i>
+                        Uygulama veritabanına bağlanamıyor.
+                    </div>
+
+                    <h5 class="mt-4">Hata Detayları:</h5>
+                    <div class="bg-light p-3 rounded border mb-4">
+                        <code>{{ error }}</code>
+                    </div>
+
+                    <div class="alert alert-info">
+                        <h5><i class="fas fa-info-circle me-2"></i> Olası Çözümler</h5>
+                        <ol>
+                            <li>Veritabanı dosyasının varlığını kontrol edin.</li>
+                            <li>Veritabanı dosyası izinlerini kontrol edin.</li>
+                            <li>Veritabanı bağlantı bilgilerini <code>.env</code> dosyasında doğrulayın.</li>
+                            <li>Veritabanı sunucusunun çalışır durumda olduğunu kontrol edin.</li>
+                        </ol>
+                    </div>
+
+                    <div class="alert alert-secondary">
+                        <h5><i class="fas fa-file-alt me-2"></i> Veritabanını Kontrol Etme</h5>
+                        <p>Veritabanı durumunu kontrol etmek için şu komutu çalıştırın:</p>
+                        <pre><code>python db_check.py</code></pre>
+                        <p>Veritabanını yeniden oluşturmak için:</p>
+                        <pre><code>python setup_db.py</code></pre>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <div class="d-flex justify-content-between">
+                        <a href="/health" class="btn btn-outline-primary">
+                            <i class="fas fa-sync-alt me-1"></i> Durumu Kontrol Et
+                        </a>
+                        <a href="/" class="btn btn-outline-secondary">
+                            <i class="fas fa-home me-1"></i> Ana Sayfaya Dön
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 
