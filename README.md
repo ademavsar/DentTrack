@@ -23,6 +23,9 @@ DentTrack, Flask ile geliştirilmiş modüler mimari kullanan bir diş kliniği 
 
 ## Kurulum
 
+> ⚠️ Önerilen Python sürümü: **3.11.8**  
+> Bazı bağımlılıklar, wheel uyumluluk sorunları nedeniyle Python 3.13.x ile kurulumda başarısız olabilir.
+
 1. Repoyu klonlayın:
 ```bash
 git clone https://github.com/yourusername/DentTrack.git
