@@ -82,11 +82,11 @@
                         <div class="row">
                             <div class="col-md-6 mb-3">
                                 <label for="cash_amount" class="form-label">Nakit Tutarı (₺)</label>
-                                <input type="number" step="0.01" class="form-control" id="cash_amount" name="cash_amount" value="0.00">
+                                <input type="number" step="0.01" class="form-control" id="cash_amount" name="cash_amount" placeholder="0.00" onfocus="this.select()">
                             </div>
                             <div class="col-md-6 mb-3">
                                 <label for="card_amount" class="form-label">Kredi Kartı Tutarı (₺)</label>
-                                <input type="number" step="0.01" class="form-control" id="card_amount" name="card_amount" value="0.00">
+                                <input type="number" step="0.01" class="form-control" id="card_amount" name="card_amount" placeholder="0.00" onfocus="this.select()">
                             </div>
                         </div>
                         
@@ -136,11 +136,11 @@
                         <div class="row">
                             <div class="col-md-6 mb-3">
                                 <label for="quick_cash_amount" class="form-label">Nakit Tutarı (₺)</label>
-                                <input type="number" step="0.01" class="form-control" id="quick_cash_amount" name="cash_amount" value="0.00">
+                                <input type="number" step="0.01" class="form-control" id="quick_cash_amount" name="cash_amount" placeholder="0.00" onfocus="this.select()">
                             </div>
                             <div class="col-md-6 mb-3">
                                 <label for="quick_card_amount" class="form-label">Kredi Kartı Tutarı (₺)</label>
-                                <input type="number" step="0.01" class="form-control" id="quick_card_amount" name="card_amount" value="0.00">
+                                <input type="number" step="0.01" class="form-control" id="quick_card_amount" name="card_amount" placeholder="0.00" onfocus="this.select()">
                             </div>
                         </div>
                         
@@ -188,7 +188,8 @@
                     <p class="mb-2"><strong>Gönderilecek mesaj:</strong> <small class="text-muted">(düzenleyebilirsiniz)</small></p>
                     <div class="card bg-body-tertiary border">
                         <div class="card-body py-2 px-3">
-                            <textarea class="form-control border-0 bg-transparent" id="whatsappMessageText" rows="6" style="resize: vertical;"></textarea>
+                            <textarea class="form-control border-0 bg-transparent" id="whatsappMessageText" rows="8" 
+                                      style="min-height: 180px; overflow: auto; resize: vertical;"></textarea>
                         </div>
                     </div>
                 </div>
@@ -262,7 +263,7 @@ document.addEventListener('DOMContentLoaded', function() {
             quickPaymentPrice.textContent = `${price.toFixed(2)} ₺`;
             
             // Set default payment values
-            quickCashAmountInput.value = "0.00";
+            quickCashAmountInput.value = '';
             quickCardAmountInput.value = price.toFixed(2);
             quickPaymentAmountInput.value = price.toFixed(2);
         });
@@ -275,6 +276,11 @@ document.addEventListener('DOMContentLoaded', function() {
         const cashAmount = parseFloat(cashAmountInput.value) || 0;
         const cardAmount = parseFloat(cardAmountInput.value) || 0;
         paymentAmountInput.value = (cashAmount + cardAmount).toFixed(2);
+        
+        // Clear the value if it's 0 to show placeholder
+        if (parseFloat(paymentAmountInput.value) === 0) {
+            paymentAmountInput.value = '';
+        }
     }
     
     function updateQuickTotalAmount() {
@@ -283,6 +289,11 @@ document.addEventListener('DOMContentLoaded', function() {
         const cashAmount = parseFloat(quickCashAmountInput.value) || 0;
         const cardAmount = parseFloat(quickCardAmountInput.value) || 0;
         quickPaymentAmountInput.value = (cashAmount + cardAmount).toFixed(2);
+        
+        // Clear the value if it's 0 to show placeholder
+        if (parseFloat(quickPaymentAmountInput.value) === 0) {
+            quickPaymentAmountInput.value = '';
+        }
     }
     
     // Add event listeners for payment amounts
@@ -343,7 +354,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 const totalPrice = parseFloat(selectedOption.dataset.price);
                 paymentAmountInput.value = totalPrice.toFixed(2);
                 // Set full amount to credit card by default
-                cashAmountInput.value = "0.00";
+                cashAmountInput.value = '';
                 cardAmountInput.value = totalPrice.toFixed(2);
                 
                 // Enable submit button
@@ -508,7 +519,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 const phoneDigitsOnly = phoneWithFormat.replace(/\D/g, '');
                 
                 // Create initial message
-                const initialMessage = `Merhaba ${patientName},\n\nKliniğimizde almış olduğunuz '${treatmentName}' tedavinize ait (${treatmentDate}) ${price}₺ tutarında ödenmemiş bakiye bulunmaktadır.\n\nEn kısa sürede ödemenizi gerçekleştirmenizi rica ederiz.\n\nTeşekkürler,\nDiş Kliniği`;
+                const initialMessage = `Merhaba ${patientName},
+
+Moda Dent Ağız ve Diş Sağlığı Polikliniği olarak, ${treatmentDate} tarihinde almış olduğunuz "${treatmentName}" tedavisine ait ${price}₺ tutarında ödenmemiş bir bakiyeniz bulunmaktadır.
+
+Ödemenizi en kısa sürede gerçekleştirmenizi rica ederiz.
+
+Sağlıklı günler dileriz.  
+Moda Dent`;
                 
                 // Update textarea in modal with initial message
                 whatsappMessageText.value = initialMessage;
