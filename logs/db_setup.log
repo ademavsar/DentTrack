@@ -1,0 +1,5 @@
+2025-03-29 10:04:52,410 INFO: Environment variables loaded [in C:\Users\avsar\Documents\DentTrack\setup_db.py:49]
+2025-03-29 10:04:52,746 INFO: Patient table already exists [in C:\Users\avsar\Documents\DentTrack\setup_db.py:63]
+2025-03-29 10:04:52,746 INFO: Existing tables: alembic_version, patient, payment, payment_detail, payment_history, treatment, treatment_history, treatment_type, user [in C:\Users\avsar\Documents\DentTrack\setup_db.py:65]
+2025-03-29 10:04:52,747 INFO: Patient table structure looks correct [in C:\Users\avsar\Documents\DentTrack\setup_db.py:80]
+2025-03-29 10:04:52,770 INFO: Database summary - Users: 1, Patients: 1, Treatments: 2, Payments: 0 [in C:\Users\avsar\Documents\DentTrack\setup_db.py:121]
