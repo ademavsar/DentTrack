@@ -6,7 +6,7 @@ import os
 import logging
 from logging.handlers import RotatingFileHandler
 from dotenv import load_dotenv
-from sqlalchemy import inspect
+from sqlalchemy import inspect, text
 import sys
 
 # Load environment variables from .env file
@@ -45,7 +45,7 @@ def create_app(config=None):
     # Load default configuration
     app.config.from_mapping(
         SECRET_KEY='dev',
-        SQLALCHEMY_DATABASE_URI='sqlite:///dent_track.db',
+        SQLALCHEMY_DATABASE_URI='sqlite:///denttrack.db',
         SQLALCHEMY_TRACK_MODIFICATIONS=False,
         AUTO_CREATE_DB=True,
         ALLOW_EMPTY_DB=True,
@@ -198,7 +198,7 @@ def create_app(config=None):
                 details = f"Missing tables: {', '.join(missing_tables)}"
             else:
                 # Simple database query check
-                db.session.execute('SELECT 1').scalar()
+                db.session.execute(text('SELECT 1')).scalar()
                 db_status = "ok"
                 details = "All required tables present"
         except Exception as e:

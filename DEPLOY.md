@@ -12,6 +12,7 @@ Bu belge, DentTrack uygulamasını üretim ortamında güvenli ve güvenilir bir
     - [1. Flask Migrations ile (Önerilen)](#1-flask-migrations-ile-önerilen)
     - [2. Setup Script ile](#2-setup-script-ile)
     - [Veritabanı Doğrulama](#veritabanı-doğrulama)
+    - [Veritabanı Yolu Standardizasyonu](#veritabanı-yolu-standardizasyonu)
   - [Admin Kullanıcısı Oluşturma](#admin-kullanıcısı-oluşturma)
   - [Ortam Değişkenleri](#ortam-değişkenleri)
   - [Veritabanı Yedekleme](#veritabanı-yedekleme)
@@ -104,6 +105,20 @@ python db_check.py
 ```
 
 Bu komut, veritabanı bağlantısını test eder ve tüm gerekli tabloların mevcut olduğunu doğrular.
+
+### Veritabanı Yolu Standardizasyonu
+
+**ÖNEMLİ:** DentTrack, veritabanı dosya yolu için standart bir format kullanır: `instance/denttrack.db`. Eski sürümlerde kullanılan `instance/dent_track.db` formatı artık desteklenmemektedir. Eğer eski formatta bir veritabanı dosyanız varsa, aşağıdaki komutla standart formata geçiş yapabilirsiniz:
+
+```bash
+python db_migrate_path.py
+```
+
+Bu komut:
+1. Mevcut veritabanı dosyalarını tespit eder
+2. Gerekirse dosyaları standart konuma kopyalar
+3. .env dosyasındaki DATABASE_URL değişkenini günceller
+4. Sorunsuz geçiş için adım adım rehberlik sunar
 
 ## Admin Kullanıcısı Oluşturma
 
@@ -222,6 +237,7 @@ Eğer veritabanına bağlanılamazsa:
 Uygulamayı üretim ortamına taşımadan önce:
 
 - [ ] Tüm ortam değişkenleri uygun şekilde ayarlanmış
+- [ ] Veritabanı yolu standardizasyonu tamamlanmış (`python db_migrate_path.py` ile kontrol edin)
 - [ ] Veritabanı kurulumu tamamlanmış ve doğrulanmış
 - [ ] Admin kullanıcısı oluşturulmuş (kritik: `python create_admin.py` ile)
 - [ ] Uygulama, hata olmadan başlatılıyor

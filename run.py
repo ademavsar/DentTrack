@@ -58,7 +58,7 @@ try:
     logger.info("Environment variables loaded")
     
     # Force the DATABASE_URL to use the correct database file
-    os.environ['DATABASE_URL'] = 'sqlite:///instance/dent_track.db'
+    os.environ['DATABASE_URL'] = 'sqlite:///instance/denttrack.db'
     
     # Import app and db after environment variables are loaded
     app = create_app()
